@@ -16,6 +16,9 @@ import slotRoutes from './routes/slots.routes.js';
 import paymentRoutes from './routes/payments.routes.js';
 import parkingAreaRoutes from './routes/parkingAreas.routes.js';
 import publicParkingAreaRoutes from './routes/publicParkingAreas.routes.js';
+import statsRoutes from './routes/stats.routes.js';
+import slotManagementRoutes from './routes/slotManagement.routes.js';
+import parkingChargeRoutes from './routes/parkingCharges.routes.js';
 import { errorHandler } from './middleware/error.js';
 import { seedAdmin } from './utils/seed.js';
 
@@ -25,7 +28,7 @@ const httpServer = createServer(app);
 // Configure CORS for Socket.IO
 const io = new Server(httpServer, {
   cors: {
-    origin: env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: env.CORS_ORIGIN || 'https://localhost:3000',
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -66,6 +69,9 @@ app.use('/api/slots', slotRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/parking-areas', parkingAreaRoutes);
 app.use('/api/public/parking-areas', publicParkingAreaRoutes); // Public route for users
+app.use('/api/stats', statsRoutes);
+app.use('/api/slot-management', slotManagementRoutes);
+app.use('/api/parking-charges', parkingChargeRoutes);
 
 // Error handler
 app.use(errorHandler);
