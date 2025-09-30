@@ -1,7 +1,8 @@
+
 export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: process.env.PORT || 5000,
-  MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/',
+  MONGODB_URI: process.env.MONGODB_URI || 'mongodb+srv://viyashviyashan:iAc2OUOFuwawg9Mw@smartpark.sr4npop.mongodb.net/?retryWrites=true&w=majority&appName=smartPark',
   JWT_SECRET: process.env.JWT_SECRET || 'smart_parking_secure_jwt_secret_2025',
   CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3000',
   EMAIL_USER: process.env.EMAIL_USER || 'viyashviyashan24@gmail.com',
@@ -16,7 +17,7 @@ export const env = {
   FIREBASE_CLIENT_ID: process.env.FIREBASE_CLIENT_ID || '112234913415486114855',
   FIREBASE_CLIENT_CERT_URL: process.env.FIREBASE_CLIENT_CERT_URL || 'https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40smart-parking-a80b9.iam.gserviceaccount.com',
   
-  //STRIPE_PUBLISHABLE_KEY=pk_test_51RmDSVLqLlpplnbrz0V7h5kO2uNcFNdVI6ev7ZHdKgNZOdS2SkS6Mhes9P30NQKnFF4HaroaqX8zW7wtmnlVJiBo00FJ2gSKck
-STRIPE_SECRET_KEY:process.env.sk_test_51RmDSVLqLlpplnbrCNRmKnfesJY1yO1UL7efo55IF5BvN9VYEOkL9YjLxRj6tSgGaOn6j63rZmQ3Q2jXKL8C4o0D00ccIWRMr7
+  STRIPE_PUBLISHABLE_KEY: process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_51RmDSjPrn4yDohxSkl5YV6mJzkaSPclh2x8CLIezDjDieRPyDAs65Le8T39u2EVIfzT9Ee3bCObxKfAcU7X4uJlg00Le36dWLJ',
+  STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || 'sk_test_51RmDSjPrn4yDohxSVDa98VvGrE2fD73rx2SQmYpUjqLiwZQe8I20Vg4flZm6Vvcmj1gtcfBjr69SYkIL3fGPemhQ00U2gL9TqP'
   
 };
