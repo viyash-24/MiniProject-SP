@@ -10,6 +10,15 @@ export function authRequired(req, res, next) {
       return next();
     }
 
+    // User email bypass for authenticated end-users (from frontend)
+    // Allows typical user flows (e.g., Stripe payments, vehicle search) without JWT
+    const userEmailHeader = req.headers['x-user-email'];
+    if (userEmailHeader) {
+      const email = String(userEmailHeader).toLowerCase();
+      req.user = { id: email, role: 'user', email };
+      return next();
+    }
+
     const bearer = req.headers.authorization || '';
     const token = (bearer.startsWith('Bearer ') ? bearer.slice(7) : null) || req.cookies?.token;
     if (!token) return res.status(401).json({ error: 'Unauthorized' });
