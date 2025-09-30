@@ -10,6 +10,8 @@ import DashboardPage from './pages/DashboardPage';
 import PaymentPage from './pages/PaymentPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
 import ParkingAreasPage from './pages/ParkingAreasPage';
+import ParkingAreaDetailsPage from './pages/ParkingAreaDetailsPage';
+import AdminSlotManagementPage from './pages/AdminSlotManagementPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 
@@ -25,7 +27,11 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/payment" element={<PaymentPage />} />
+            <Route path="/payment" element={
+              <ProtectedRoute>
+                <PaymentPage />
+              </ProtectedRoute>
+            } />
             <Route path="/admin" element={
               <ProtectedRoute requireAdmin>
                 <AdminDashboardPage />
@@ -36,6 +42,22 @@ function App() {
                 <ParkingAreasPage />
               </ProtectedRoute>
             } />
+            <Route path="/admin/parking-areas/:id" element={
+              <ProtectedRoute requireAdmin>
+                <ParkingAreaDetailsPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/slot-management" element={
+              <ProtectedRoute requireAdmin>
+                <AdminSlotManagementPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/parking/:id" element={
+              <ProtectedRoute>
+                <ParkingAreaDetailsPage />
+              </ProtectedRoute>
+            } />
+            
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
