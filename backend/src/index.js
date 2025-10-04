@@ -76,7 +76,7 @@ app.use('/api/parking-charges', parkingChargeRoutes);
 // Error handler
 app.use(errorHandler);
 
-// Start
+// Start & connect DB
 (async () => {
   await connectDB();
   await seedAdmin();
@@ -86,4 +86,4 @@ app.use(errorHandler);
   });
 })();
 
-export { io };  // Export io for use in controllers
+export { io };  
