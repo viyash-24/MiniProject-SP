@@ -2,7 +2,7 @@ import { User } from '../models/User.js';
 import { comparePassword, hashPassword } from '../utils/passwords.js';
 import { signToken } from '../utils/jwt.js';
 
-//register 
+//register function
 export async function register(req, res) {
   const { name, email, phone, password } = req.body;
   const existing = await User.findOne({ email: email.toLowerCase() });
