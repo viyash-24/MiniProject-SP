@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -14,8 +14,16 @@ import ParkingAreaDetailsPage from './pages/ParkingAreaDetailsPage';
 import AdminSlotManagementPage from './pages/AdminSlotManagementPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './routes/ProtectedRoute';
+import { useAuth } from './context/AuthContext';
 
 function App() {
+  // Wrapper that redirects admins away from user pages while leaving others unaffected
+  const AdminRedirect = ({ children }) => {
+    const { isAdmin } = useAuth();
+    if (isAdmin) return <Navigate to="/admin" replace />;
+    return children;
+  };
+
   return (
     <Router>
       <div className="flex flex-col min-h-screen">
@@ -23,12 +31,20 @@ function App() {
         <Header />
         <main className="flex-grow">
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={
+              <AdminRedirect>
+                <HomePage />
+              </AdminRedirect>
+            } />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/dashboard" element={
+              <AdminRedirect>
+                <DashboardPage />
+              </AdminRedirect>
+            } />
             <Route path="/payment" element={
-              <ProtectedRoute>
+              <ProtectedRoute disallowAdmin>
                 <PaymentPage />
               </ProtectedRoute>
             } />
@@ -53,7 +69,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/parking/:id" element={
-              <ProtectedRoute>
+              <ProtectedRoute disallowAdmin>
                 <ParkingAreaDetailsPage />
               </ProtectedRoute>
             } />
