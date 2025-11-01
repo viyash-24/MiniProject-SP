@@ -38,13 +38,13 @@ const Header = () => {
     <nav className="bg-white/80 backdrop-blur border-b border-gray-200 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to={isAdmin ? '/admin' : '/'} className="flex items-center gap-2">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold">SP</span>
             <span className="text-lg font-semibold text-gray-800">Smart Parking</span>
           </Link>
           <div className="hidden md:flex items-center gap-1">
-            <NavLink to="/" className={navLinkClass}>Home</NavLink>
-            <NavLink to="/dashboard" className={navLinkClass}>Parking</NavLink>
+            {!isAdmin && <NavLink to="/" className={navLinkClass}>Home</NavLink>}
+            {!isAdmin && <NavLink to="/dashboard" className={navLinkClass}>Parking</NavLink>}
             {user && !isAdmin && <NavLink to="/payment" className={navLinkClass}>Payment</NavLink>}
             {isAdmin && <NavLink to="/admin" className={adminNavLinkClass}>Admin</NavLink>}
           </div>
@@ -105,8 +105,8 @@ const Header = () => {
       {open && (
         <div className="md:hidden border-t border-gray-200">
           <div className="space-y-1 px-4 py-3">
-            <NavLink to="/" className={navLinkClass} onClick={() => setOpen(false)}>Home</NavLink>
-            <NavLink to="/dashboard" className={navLinkClass} onClick={() => setOpen(false)}>Parking</NavLink>
+            {!isAdmin && <NavLink to="/" className={navLinkClass} onClick={() => setOpen(false)}>Home</NavLink>}
+            {!isAdmin && <NavLink to="/dashboard" className={navLinkClass} onClick={() => setOpen(false)}>Parking</NavLink>}
             {user && !isAdmin && <NavLink to="/payment" className={navLinkClass} onClick={() => setOpen(false)}>Payment</NavLink>}
             {isAdmin && <NavLink to="/admin" className={adminNavLinkClass} onClick={() => setOpen(false)}>Admin</NavLink>}
             <div className="pt-2">
