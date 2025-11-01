@@ -2,7 +2,6 @@ import { User } from '../models/User.js';
 import { comparePassword, hashPassword } from '../utils/passwords.js';
 import { signToken } from '../utils/jwt.js';
 
-//register function
 export async function register(req, res) {
   const { name, email, phone, password } = req.body;
   const existing = await User.findOne({ email: email.toLowerCase() });
@@ -14,7 +13,6 @@ export async function register(req, res) {
   res.json({ token, user: { id: user._id, email: user.email, role: user.role, name: user.name } });
 }
 
-//login function
 export async function login(req, res) {
   const { email, password } = req.body;
   const user = await User.findOne({ email: (email||'').toLowerCase() });
@@ -31,7 +29,6 @@ export async function me(req, res) {
   res.json({ user });
 }
 
-//logout 
 export async function logout(req, res) {
   res.clearCookie('token');
   res.json({ ok: true });

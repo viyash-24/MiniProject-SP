@@ -61,7 +61,7 @@ const ParkingChargesDisplay = ({ compact = false }) => {
             <div key={charge._id} className="bg-gray-50 rounded-lg px-3 py-2">
               <div className="text-sm font-medium text-gray-900">{charge.vehicleType}</div>
               <div className="text-lg font-bold text-green-600">
-                {charge.amount}/=
+                ₹{charge.amount}
                 <span className="text-xs text-gray-500 ml-1">{charge.duration}</span>
               </div>
             </div>

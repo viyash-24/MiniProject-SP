@@ -1,9 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 
 const Footer = () => {
-  const { isAdmin } = useAuth();
   return (
     <footer className="bg-gray-50 border-t border-gray-200 mt-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -18,15 +16,15 @@ const Footer = () => {
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-3">Product</h4>
             <ul className="space-y-2 text-sm text-gray-600">
-              {!isAdmin && <li><Link to="/dashboard" className="hover:text-primary">Parking Finder</Link></li>}
-              {!isAdmin && <li><Link to="/payment" className="hover:text-primary">Payments</Link></li>}
-              {isAdmin && <li><Link to="/admin" className="hover:text-primary">Admin</Link></li>}
+              <li><Link to="/dashboard" className="hover:text-primary">Parking Finder</Link></li>
+              <li><Link to="/payment" className="hover:text-primary">Payments</Link></li>
+              <li><Link to="/admin" className="hover:text-primary">Admin</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-sm font-semibold text-gray-900 mb-3">Company</h4>
             <ul className="space-y-2 text-sm text-gray-600">
-              {!isAdmin && <li><Link to="/" className="hover:text-primary">About</Link></li>}
+              <li><Link to="/" className="hover:text-primary">About</Link></li>
               <li><a href="#" className="hover:text-primary">Contact</a></li>
             </ul>
           </div>
