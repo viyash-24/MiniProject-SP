@@ -2,7 +2,6 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import useStats from '../hooks/useStats';
 import StatsCard from '../components/StatsCard';
-import ParkingChargesDisplay from '../components/ParkingChargesDisplay';
 
 const features = [
   { title: 'Live Availability', desc: 'See real-time free slots across nearby parking areas.' },
@@ -131,14 +130,6 @@ const HomePage = () => {
               <p className="text-red-600 text-sm">Failed to load statistics: {error}</p>
             </div>
           )}
-        </div>
-      </section>
-
-      {/* Parking Charges Section */}
-      <section className="py-14 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">Parking Rates</h2>
-          <ParkingChargesDisplay compact={true} />
         </div>
       </section>
 
