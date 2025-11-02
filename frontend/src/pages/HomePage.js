@@ -57,17 +57,6 @@ const HomePage = () => {
             </div>
             <div className="relative">
               <img className="rounded-xl shadow-2xl w-full object-cover h-80" src="https://images.unsplash.com/photo-1493238792000-8113da705763?q=80&w=1600&auto=format&fit=crop" alt="Parking" />
-              <div className="absolute -bottom-6 -left-6 bg-white/90 border shadow rounded-xl p-4 w-64 hidden sm:block">
-                <div className="text-sm font-semibold text-gray-800">Live Slots</div>
-                <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-gray-600">Downtown Garage</span>
-                  <span className="font-semibold text-green-600">12 free</span>
-                </div>
-                <div className="mt-1 flex justify-between text-sm">
-                  <span className="text-gray-600">Central Mall</span>
-                  <span className="font-semibold text-green-600">8 free</span>
-                </div>
-              </div>
             </div>
           </div>
         </div>
