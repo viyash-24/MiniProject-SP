@@ -65,7 +65,7 @@ const RegisterPage = () => {
           <p className="text-sm text-gray-600 text-center mt-4">Already have an account? <Link to="/login" className="text-primary hover:underline">Log in</Link></p>
         </div>
         <div className="hidden md:block bg-gray-50 p-8">
-          <div className="h-full rounded-xl bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1483721310020-03333e577078?q=80&w=1600&auto=format&fit=crop')"}} />
+          <div className="h-full rounded-xl bg-cover bg-center" style={{backgroundImage: "url('https://images.unsplash.com/photo-1578859695220-856a4f5edd39?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D')"}} />
         </div>
       </div>
     </div>
