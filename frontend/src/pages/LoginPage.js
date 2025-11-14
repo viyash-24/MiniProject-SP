@@ -100,7 +100,7 @@ const LoginPage = () => {
             </label>
             <input
               id="password"
-              type={showPassword ? "text" : "password"} // 👈 toggle here
+              type={showPassword ? "text" : "password"} // Toggle here
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
