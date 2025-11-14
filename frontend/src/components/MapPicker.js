@@ -6,7 +6,7 @@ const MapPicker = ({ latitude, longitude, onLocationChange }) => {
 
   useEffect(() => {
     if (latitude && longitude) {
-      // Using OpenStreetMap for the map preview
+      // Map preview powered by OpenStreetMap
       const url = `https://www.openstreetmap.org/export/embed.html?bbox=${longitude-0.01},${latitude-0.01},${longitude+0.01},${latitude+0.01}&layer=mapnik&marker=${latitude},${longitude}`;
       setMapUrl(url);
     }
