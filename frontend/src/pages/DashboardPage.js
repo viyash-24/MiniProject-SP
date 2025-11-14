@@ -2,7 +2,6 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import ParkingChargesDisplay from '../components/ParkingChargesDisplay';
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -166,12 +165,7 @@ function DashboardPage() {
           <p>{locationError}</p>
         </div>
       )}
-
-      {/* Display Parking Charges */}
-      <div className="mb-8">
-        <ParkingChargesDisplay compact={true} />
-      </div>
-
+      
       {parkingAreas.length === 0 ? (
         <div className="text-center py-12">
           <svg
