@@ -73,7 +73,7 @@ export async function createPaymentIntent(req, res) {
 
     // Use fixed amount for faster processing (₹50 default)
     const amount = 50; // INR
-    const currency = 'sl';
+    const currency = 'inr';
 
     // Create payment intent immediately without complex calculations
     const paymentIntent = await stripe.paymentIntents.create({
