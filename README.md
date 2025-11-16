@@ -71,28 +71,31 @@ This Smart Parking System is ideal for busy town areas where parking is limited.
 
 ---
    
-2.Backend:
-
-cd backend
-npm install
-npm run dev
-
+2. **Backend Setup:**  
+```bash
+   cd backend
+   npm install
+   npm run dev
+```
 ---
-3.Frontend:
 
-cd frontend
-npm install
-npm start
-
+3. **Frontend:**
+```bash
+   cd frontend
+   npm install
+   npm start
+```
 ---
+
 4.Open your browser at http://localhost:3000
 
 ---
-##🔮 Future Improvements
 
--**Mobile Application:** Android and iOS apps for real-time parking management.
--**IoT Integration:** Automated slot detection using sensors.
+## 🔮 Future Improvements
 
--**AI-based Slot Recommendation:** Predict nearest available slots.
+- **Mobile Application:** - Android and iOS apps for real-time parking management.
+- **IoT Integration:** - Automated slot detection using sensors.
 
--**Digital Receipts & Reports:** Generate detailed receipts and usage reports.
+- **AI-based Slot Recommendation:** - Predict nearest available slots.
+
+- **Digital Receipts & Reports:** - Generate detailed receipts and usage reports.
