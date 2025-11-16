@@ -54,7 +54,7 @@ const RegisterPage = () => {
             </div>
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700">Phone</label>
-              <input id="phone" type="tel" value={form.phone} onChange={onChange} required className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" placeholder="+91 00000 00000" />
+              <input id="phone" type="tel" value={form.phone} onChange={onChange} required className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" placeholder="+94 00 0000 000" />
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
