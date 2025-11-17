@@ -15,3 +15,13 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+/* index.css */
+:root {
+  --color-background: white;
+  --color-text: black;
+}
+.dark-mode {
+  --color-background: #121212;
+  --color-text: white;
+}
+/* ... rest of your styles ... */
