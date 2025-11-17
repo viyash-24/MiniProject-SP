@@ -174,7 +174,7 @@ const PaymentPage = () => {
     }
   };
 
-  // Helper function for retry delays
+  // Helper function for retry delays function
   const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
   // Create payment intent for embedded Stripe Elements
