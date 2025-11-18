@@ -20,6 +20,7 @@ try {
     stripe = null;
 }
 
+//send mail for user
 async function sendEmail(to, subject, html) {
   try {
     if (!env.EMAIL_USER || !env.EMAIL_PASS) return;
@@ -118,7 +119,7 @@ export async function confirmStripePayment(req, res) {
     v.status = 'Paid';
     await v.save();
 
-    // Record payment
+    // Record payment details
     const amount = (intent.amount_received ?? intent.amount) / 100;
     const p = await Payment.create({
       vehicleId: v._id,

@@ -1,6 +1,9 @@
+import { Eye, EyeOff } from 'lucide-react';
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+
+
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -10,6 +13,8 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const from = location.state?.from?.pathname || '/dashboard';
 
   const onSubmit = async (e) => {
@@ -57,9 +62,31 @@ const LoginPage = () => {
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
             <input id="email" type="email" value={email} onChange={(e)=>setEmail(e.target.value)} required className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" placeholder="you@example.com" />
           </div>
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-            <input id="password" type="password" value={password} onChange={(e)=>setPassword(e.target.value)} required className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" placeholder="••••••••" />
+
+          {/* Password with toggle */}
+          <div className="relative">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700"
+            >
+              Password
+            </label>
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"} // Toggle here
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary pr-10"
+              placeholder="••••••••"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-2 top-7 text-gray-500 hover:text-gray-700"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
           </div>
           <div className="flex items-center justify-between text-sm">
             <label className="inline-flex items-center gap-2 select-none">
