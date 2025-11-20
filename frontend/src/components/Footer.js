@@ -1,9 +1,16 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLoading } from '../context/LoadingContext';
 
 const Footer = () => {
   const { isAdmin } = useAuth();
+  const { setLoading } = useLoading();
+
+  const handleNavClick = () => {
+    setLoading(true);
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  };
   return (
     <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -43,19 +50,19 @@ const Footer = () => {
             <ul className="space-y-3">
               {!isAdmin && (
                 <>
-                  <li><Link to="/" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+                  <li><Link to="/" onClick={handleNavClick} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                     <span className="h-1 w-1 bg-blue-500 rounded-full"></span>Home
                   </Link></li>
-                  <li><Link to="/dashboard" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+                  <li><Link to="/dashboard" onClick={handleNavClick} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                     <span className="h-1 w-1 bg-blue-500 rounded-full"></span>Find Parking
                   </Link></li>
-                  <li><Link to="/payment" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+                  <li><Link to="/payment" onClick={handleNavClick} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                     <span className="h-1 w-1 bg-blue-500 rounded-full"></span>Payments
                   </Link></li>
                 </>
               )}
               {isAdmin && (
-                <li><Link to="/admin" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+                <li><Link to="/admin" onClick={handleNavClick} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                   <span className="h-1 w-1 bg-blue-500 rounded-full"></span>Admin Dashboard
                 </Link></li>
               )}
@@ -65,13 +72,13 @@ const Footer = () => {
           <div>
             <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Company</h4>
             <ul className="space-y-3">
-              <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+              <li><Link to="/about" onClick={handleNavClick} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                 <span className="h-1 w-1 bg-blue-500 rounded-full"></span>About Us
               </Link></li>
-              <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+              <li><Link to="/contact" onClick={handleNavClick} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                 <span className="h-1 w-1 bg-blue-500 rounded-full"></span>Contact Us
               </Link></li>
-              <li><Link to="/faqs" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+              <li><Link to="/faqs" onClick={handleNavClick} className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                 <span className="h-1 w-1 bg-blue-500 rounded-full"></span>FAQs
               </Link></li>
             </ul>
