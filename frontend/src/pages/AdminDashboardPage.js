@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import toast from 'react-hot-toast';
+import React, { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import toast from "react-hot-toast";
 
 const TabButton = ({ active, onClick, children }) => (
-  <button 
-    onClick={onClick} 
+  <button
+    onClick={onClick}
     className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
-      active ? 'border-primary text-primary' : 'border-transparent text-gray-600 hover:text-gray-900'
+      active
+        ? "border-primary text-primary"
+        : "border-transparent text-gray-600 hover:text-gray-900"
     }`}
   >
     {children}
@@ -16,55 +18,76 @@ const TabButton = ({ active, onClick, children }) => (
 
 const AdminDashboardPage = () => {
   const { user } = useAuth();
-  const [tab, setTab] = useState('vehicles');
+  const [tab, setTab] = useState("vehicles");
   const [showAddForm, setShowAddForm] = useState(false);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState("");
   const [vehicles, setVehicles] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [slots, setSlots] = useState([]);
   const [payments, setPayments] = useState([]);
   const [parkingAreas, setParkingAreas] = useState([]);
   const [parkingCharges, setParkingCharges] = useState([]);
-  const [newUser, setNewUser] = useState({ name: '', email: '', phone: '' });
-  const [newVehicle, setNewVehicle] = useState({ plate: '', slotName: '', vehicleType: 'Car' });
-  const [newSlot, setNewSlot] = useState({ name: '', total: 50 });
-  const [selectedParkingArea, setSelectedParkingArea] = useState('');
-  const [newCharge, setNewCharge] = useState({ vehicleType: '', amount: 0, duration: 'per hour' });
+  const [newUser, setNewUser] = useState({ name: "", email: "", phone: "" });
+  const [newVehicle, setNewVehicle] = useState({
+    plate: "",
+    slotName: "",
+    vehicleType: "Car",
+  });
+  const [newSlot, setNewSlot] = useState({ name: "", total: 50 });
+  const [selectedParkingArea, setSelectedParkingArea] = useState("");
+  const [newCharge, setNewCharge] = useState({
+    vehicleType: "",
+    amount: 0,
+    duration: "per hour",
+  });
   const [editingCharge, setEditingCharge] = useState(null);
-  const vehicleTypes = ['Car', 'Bike', 'Van', 'Bus', 'Truck', 'Auto', 'SUV', 'Scooter', 'Other'];
-
-  const tabs = [
-    { id: 'vehicles', name: 'Vehicles' },
-    { id: 'users', name: 'Users' },
-    { id: 'slots', name: 'Slots' },
-    { id: 'payments', name: 'Payments' },
-    { id: 'parking-areas', name: 'Parking Areas' },
-    { id: 'parking-charges', name: 'Parking Charges' },
+  const vehicleTypes = [
+    "Car",
+    "Bike",
+    "Van",
+    "Bus",
+    "Truck",
+    "Auto",
+    "SUV",
+    "Scooter",
+    "Other",
   ];
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-  const authHeader = useMemo(() => ({
-    'Content-Type': 'application/json',
-    'x-admin-email': user?.email || '',
-  }), [user?.email]);
+  const tabs = [
+    { id: "vehicles", name: "Vehicles" },
+    { id: "users", name: "Users" },
+    { id: "slots", name: "Slots" },
+    { id: "payments", name: "Payments" },
+    { id: "parking-areas", name: "Parking Areas" },
+    { id: "parking-charges", name: "Parking Charges" },
+  ];
+
+  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+  const authHeader = useMemo(
+    () => ({
+      "Content-Type": "application/json",
+      "x-admin-email": user?.email || "",
+    }),
+    [user?.email]
+  );
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [
-          vehiclesRes, 
-          usersRes, 
-          slotsRes, 
+          vehiclesRes,
+          usersRes,
+          slotsRes,
           paymentsRes,
           parkingAreasRes,
-          parkingChargesRes
+          parkingChargesRes,
         ] = await Promise.all([
           fetch(`${API_URL}/vehicles`, { headers: authHeader }),
           fetch(`${API_URL}/users`, { headers: authHeader }),
           fetch(`${API_URL}/slots`, { headers: authHeader }),
           fetch(`${API_URL}/payments`, { headers: authHeader }),
           fetch(`${API_URL}/parking-areas`, { headers: authHeader }),
-          fetch(`${API_URL}/parking-charges`, { headers: authHeader })
+          fetch(`${API_URL}/parking-charges`, { headers: authHeader }),
         ]);
 
         setVehicles((await vehiclesRes.json()).vehicles || []);
@@ -74,20 +97,28 @@ const AdminDashboardPage = () => {
         setParkingAreas((await parkingAreasRes.json()).parkingAreas || []);
         setParkingCharges((await parkingChargesRes.json()).charges || []);
       } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error('Failed to fetch data');
+        console.error("Error fetching data:", error);
+        toast.error("Failed to fetch data");
       }
     };
     if (user?.email) fetchData();
   }, [user?.email, authHeader, API_URL]);
 
   const filteredVehicles = useMemo(() => {
-    return vehicles.filter(v => [v.userEmail, v.plate, v.slotName, v.status, v.userPhone, v.userName].join(' ').toLowerCase().includes(q.toLowerCase()));
+    return vehicles.filter((v) =>
+      [v.userEmail, v.plate, v.slotName, v.status, v.userPhone, v.userName]
+        .join(" ")
+        .toLowerCase()
+        .includes(q.toLowerCase())
+    );
   }, [vehicles, q]);
 
   const filteredParkingAreas = useMemo(() => {
-    return parkingAreas.filter(area => 
-      [area.name, area.address, area.status].join(' ').toLowerCase().includes(q.toLowerCase())
+    return parkingAreas.filter((area) =>
+      [area.name, area.address, area.status]
+        .join(" ")
+        .toLowerCase()
+        .includes(q.toLowerCase())
     );
   }, [parkingAreas, q]);
 
@@ -98,24 +129,27 @@ const AdminDashboardPage = () => {
     const promise = async () => {
       // create user
       const userRes = await fetch(`${API_URL}/users`, {
-        method: 'POST',
+        method: "POST",
         headers: authHeader,
         body: JSON.stringify(newUser),
       });
       const userData = await userRes.json();
-      if (!userRes.ok) throw new Error(userData.error || 'Failed to create user');
+      if (!userRes.ok)
+        throw new Error(userData.error || "Failed to create user");
 
       // Update users list with the returned user data
       if (userData.user) {
-        setUsersList(prev => {
-          const existingUserIndex = prev.findIndex(u => u.email === userData.user.email);
+        setUsersList((prev) => {
+          const existingUserIndex = prev.findIndex(
+            (u) => u.email === userData.user.email
+          );
           if (existingUserIndex >= 0) {
             // Update existing user
             const updated = [...prev];
             updated[existingUserIndex] = userData.user;
             return updated;
           } else {
-            // Add new user
+            // Add new user to the system
             return [userData.user, ...prev];
           }
         });
@@ -123,11 +157,11 @@ const AdminDashboardPage = () => {
 
       // create vehicle with user details
       const vehicleRes = await fetch(`${API_URL}/vehicles`, {
-        method: 'POST',
+        method: "POST",
         headers: authHeader,
         body: JSON.stringify({
           plate: newVehicle.plate,
-          slotName: newVehicle.slotName || '',
+          slotName: newVehicle.slotName || "",
           userEmail: newUser.email,
           userName: newUser.name,
           userPhone: newUser.phone,
@@ -136,108 +170,118 @@ const AdminDashboardPage = () => {
         }),
       });
       const vehicleData = await vehicleRes.json();
-      if (!vehicleRes.ok) throw new Error(vehicleData.error || 'Failed to create vehicle');
-      setVehicles(prev => [vehicleData.vehicle, ...prev]);
+      if (!vehicleRes.ok)
+        throw new Error(vehicleData.error || "Failed to create vehicle");
+      setVehicles((prev) => [vehicleData.vehicle, ...prev]);
 
-      setNewUser({ name: '', email: '', phone: '' });
-      setNewVehicle({ plate: '', slotName: '', vehicleType: 'Car' });
-      setSelectedParkingArea('');
+      setNewUser({ name: "", email: "", phone: "" });
+      setNewVehicle({ plate: "", slotName: "", vehicleType: "Car" });
+      setSelectedParkingArea("");
       setShowAddForm(false);
 
       // Return success message based on whether user was re-registered or new
-      return userData.message || 'User and vehicle created successfully!';
+      return userData.message || "User and vehicle created successfully!";
     };
 
     toast.promise(promise(), {
-      loading: 'Creating user and vehicle...',
+      loading: "Creating user and vehicle...",
       success: (message) => message,
-      error: (err) => err.message || 'An error occurred.',
+      error: (err) => err.message || "An error occurred.",
     });
   };
 
   const markPaid = async (vehicle) => {
     const promise = async () => {
       // First mark as paid
-      const res = await fetch(`${API_URL}/vehicles/${vehicle._id}/pay`, { 
-        method: 'POST', 
-        headers: authHeader, 
-        body: JSON.stringify({ method: 'Cash' }) 
+      const res = await fetch(`${API_URL}/vehicles/${vehicle._id}/pay`, {
+        method: "POST",
+        headers: authHeader,
+        body: JSON.stringify({ method: "Cash" }),
       });
-      
+
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to mark as paid');
+        throw new Error(data.error || "Failed to mark as paid");
       }
-      
+
       const data = await res.json();
-      
+
       // Update the vehicle in the UI
-      setVehicles(prev => 
-        prev.map(v => v._id === vehicle._id ? data.vehicle : v)
+      setVehicles((prev) =>
+        prev.map((v) => (v._id === vehicle._id ? data.vehicle : v))
       );
-      
+
       // Show success message with receipt info
-      return `Payment marked as paid. Receipt sent to ${vehicle.userPhone ? 'phone' : 'email'}`;
+      return `Payment marked as paid. Receipt sent to ${
+        vehicle.userPhone ? "phone" : "email"
+      }`;
     };
 
     toast.promise(promise(), {
-      loading: 'Processing payment and generating receipt...',
+      loading: "Processing payment and generating receipt...",
       success: (message) => message,
-      error: (err) => err.message || 'Failed to process payment',
+      error: (err) => err.message || "Failed to process payment",
     });
   };
 
   const exitVehicle = async (v) => {
     const promise = async () => {
-      const res = await fetch(`${API_URL}/vehicles/${v._id}/exit`, { method: 'POST', headers: authHeader });
+      const res = await fetch(`${API_URL}/vehicles/${v._id}/exit`, {
+        method: "POST",
+        headers: authHeader,
+      });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to exit vehicle');
-      setVehicles(prev => prev.map(item => item._id === v._id ? data.vehicle : item));
+      if (!res.ok) throw new Error(data.error || "Failed to exit vehicle");
+      setVehicles((prev) =>
+        prev.map((item) => (item._id === v._id ? data.vehicle : item))
+      );
     };
-    
+
     toast.promise(promise(), {
-      loading: 'Processing exit...',
-      success: 'Vehicle exited!',
-      error: (err) => err.message || 'An error occurred.',
+      loading: "Processing exit...",
+      success: "Vehicle exited!",
+      error: (err) => err.message || "An error occurred.",
     });
   };
 
   const updateSlot = async (s, next) => {
     try {
-      const res = await fetch(`${API_URL}/slots/${s._id}`, { 
-        method: 'PUT', 
-        headers: authHeader, 
-        body: JSON.stringify(next) 
+      const res = await fetch(`${API_URL}/slots/${s._id}`, {
+        method: "PUT",
+        headers: authHeader,
+        body: JSON.stringify(next),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to update slot');
-      setSlots(prev => prev.map(item => item._id === s._id ? data.slot : item));
-      toast.success('Slot updated!');
+      if (!res.ok) throw new Error(data.error || "Failed to update slot");
+      setSlots((prev) =>
+        prev.map((item) => (item._id === s._id ? data.slot : item))
+      );
+      toast.success("Slot updated!");
     } catch (error) {
-      toast.error(error.message || 'Failed to update slot');
+      toast.error(error.message || "Failed to update slot");
     }
   };
 
   const createSlot = async (e) => {
     e.preventDefault();
     if (!newSlot.name || !newSlot.total) return;
-    
+
     const promise = async () => {
       const res = await fetch(`${API_URL}/slots`, {
-        method: 'POST',
+        method: "POST",
         headers: authHeader,
         body: JSON.stringify({ ...newSlot, free: newSlot.total }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create slot');
-      setSlots(prev => [data.slot, ...prev]);
-      setNewSlot({ name: '', total: 50 }); // reset form
+      if (!res.ok) throw new Error(data.error || "Failed to create slot");
+      setSlots((prev) => [data.slot, ...prev]);
+      setNewSlot({ name: "", total: 50 }); // reset form
     };
 
     toast.promise(promise(), {
-      loading: 'Creating slot...',
-      success: 'Slot created!',
-      error: (err) => err.message || 'An error occurred.',
+      loading: "Creating slot...",
+      success: "Slot created!",
+      error: (err) => err.message || "An error occurred.",
     });
   };
 
@@ -245,64 +289,70 @@ const AdminDashboardPage = () => {
   const createOrUpdateParkingCharge = async (e) => {
     e.preventDefault();
     if (!newCharge.vehicleType || !newCharge.amount) {
-      toast.error('Please fill in all required fields');
+      toast.error("Please fill in all required fields");
       return;
     }
 
     const promise = async () => {
-      const url = editingCharge 
+      const url = editingCharge
         ? `${API_URL}/parking-charges/${editingCharge._id}`
         : `${API_URL}/parking-charges`;
-      
+
       const res = await fetch(url, {
-        method: editingCharge ? 'PUT' : 'POST',
+        method: editingCharge ? "PUT" : "POST",
         headers: authHeader,
         body: JSON.stringify(newCharge),
       });
-      
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to save parking charge');
-      
+      if (!res.ok)
+        throw new Error(data.error || "Failed to save parking charge");
+
       if (editingCharge) {
-        setParkingCharges(prev => prev.map(c => c._id === data.charge._id ? data.charge : c));
+        setParkingCharges((prev) =>
+          prev.map((c) => (c._id === data.charge._id ? data.charge : c))
+        );
       } else {
-        setParkingCharges(prev => [data.charge, ...prev]);
+        setParkingCharges((prev) => [data.charge, ...prev]);
       }
-      
-      setNewCharge({ vehicleType: '', amount: 0, duration: 'per hour' });
+
+      setNewCharge({ vehicleType: "", amount: 0, duration: "per hour" });
       setEditingCharge(null);
-      
-      return editingCharge ? 'Parking charge updated!' : 'Parking charge created!';
+
+      return editingCharge
+        ? "Parking charge updated!"
+        : "Parking charge created!";
     };
 
     toast.promise(promise(), {
-      loading: editingCharge ? 'Updating charge...' : 'Creating charge...',
+      loading: editingCharge ? "Updating charge..." : "Creating charge...",
       success: (msg) => msg,
-      error: (err) => err.message || 'An error occurred.',
+      error: (err) => err.message || "An error occurred.",
     });
   };
 
   const deleteParkingCharge = async (chargeId) => {
-    if (!window.confirm('Are you sure you want to delete this parking charge?')) return;
+    if (!window.confirm("Are you sure you want to delete this parking charge?"))
+      return;
 
     const promise = async () => {
       const res = await fetch(`${API_URL}/parking-charges/${chargeId}`, {
-        method: 'DELETE',
+        method: "DELETE",
         headers: authHeader,
       });
-      
+
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to delete parking charge');
+        throw new Error(data.error || "Failed to delete parking charge");
       }
-      
-      setParkingCharges(prev => prev.filter(c => c._id !== chargeId));
+
+      setParkingCharges((prev) => prev.filter((c) => c._id !== chargeId));
     };
 
     toast.promise(promise(), {
-      loading: 'Deleting charge...',
-      success: 'Parking charge deleted!',
-      error: (err) => err.message || 'An error occurred.',
+      loading: "Deleting charge...",
+      success: "Parking charge deleted!",
+      error: (err) => err.message || "An error occurred.",
     });
   };
 
@@ -310,8 +360,8 @@ const AdminDashboardPage = () => {
     setNewCharge({
       vehicleType: charge.vehicleType,
       amount: charge.amount,
-      duration: charge.duration || 'per hour',
-      description: charge.description || '',
+      duration: charge.duration || "per hour",
+      description: charge.description || "",
     });
     setEditingCharge(charge);
   };
@@ -321,17 +371,19 @@ const AdminDashboardPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">Manage users, vehicles, slots, and payments.</p>
+          <p className="text-gray-600">
+            Manage users, vehicles, slots, and payments.
+          </p>
         </div>
         <div className="flex gap-2">
-          <button 
+          <button
             type="button"
-            className="px-4 py-2 rounded-md bg-primary text-white" 
+            className="px-4 py-2 rounded-md bg-primary text-white"
             onClick={() => setShowAddForm(true)}
           >
             Add User & Vehicle
           </button>
-          <Link 
+          <Link
             to="/admin/parking-areas"
             state={{ openForm: true }}
             className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 text-center"
@@ -344,7 +396,7 @@ const AdminDashboardPage = () => {
       <div className="mt-6 bg-white border rounded-2xl shadow-sm">
         <div className="flex space-x-4 border-b mb-6 overflow-x-auto">
           {tabs.map(({ id, name }) => (
-            <TabButton 
+            <TabButton
               key={id}
               active={tab === id}
               onClick={() => {
@@ -352,60 +404,122 @@ const AdminDashboardPage = () => {
                 setShowAddForm(false);
               }}
             >
-              {name} 
-              {id === 'vehicles' && `(${vehicles.length})`}
-              {id === 'users' && `(${usersList.length})`}
-              {id === 'slots' && `(${slots.length})`}
-              {id === 'payments' && `(${payments.length})`}
-              {id === 'parking-areas' && `(${parkingAreas.length})`}
-              {id === 'parking-charges' && `(${parkingCharges.length})`}
+              {name}
+              {id === "vehicles" && `(${vehicles.length})`}
+              {id === "users" && `(${usersList.length})`}
+              {id === "slots" && `(${slots.length})`}
+              {id === "payments" && `(${payments.length})`}
+              {id === "parking-areas" && `(${parkingAreas.length})`}
+              {id === "parking-charges" && `(${parkingCharges.length})`}
             </TabButton>
           ))}
         </div>
 
         {showAddForm && (
           <div className="p-4">
-            <form onSubmit={createUserAndVehicle} className="grid sm:grid-cols-1 md:grid-cols-2 gap-6">
-              <div className='space-y-4'>
-                <h3 className='text-lg font-medium'>User Details</h3>
-                <input placeholder="Name" value={newUser.name} onChange={e=>setNewUser(u=>({...u, name:e.target.value}))} className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" />
-                <input placeholder="Email" required value={newUser.email} onChange={e=>setNewUser(u=>({...u, email:e.target.value}))} className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" />
-                <input placeholder="Phone" value={newUser.phone} onChange={e=>setNewUser(u=>({...u, phone:e.target.value}))} className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" />
-                
+            <form
+              onSubmit={createUserAndVehicle}
+              className="grid sm:grid-cols-1 md:grid-cols-2 gap-6"
+            >
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">User Details</h3>
+                <input
+                  placeholder="Name"
+                  value={newUser.name}
+                  onChange={(e) =>
+                    setNewUser((u) => ({ ...u, name: e.target.value }))
+                  }
+                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                />
+                <input
+                  placeholder="Email"
+                  required
+                  value={newUser.email}
+                  onChange={(e) =>
+                    setNewUser((u) => ({ ...u, email: e.target.value }))
+                  }
+                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                />
+                <input
+                  placeholder="Phone"
+                  value={newUser.phone}
+                  onChange={(e) =>
+                    setNewUser((u) => ({ ...u, phone: e.target.value }))
+                  }
+                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                />
               </div>
-              <div className='space-y-4'>
-                <h3 className='text-lg font-medium'>Vehicle Details</h3>
-                <input placeholder="Plate (e.g. TN-09-AB-1234)" required value={newVehicle.plate} onChange={e=>setNewVehicle(v=>({...v, plate:e.target.value}))} className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" />
-                
-                <select value={newVehicle.vehicleType} onChange={e=>setNewVehicle(v=>({...v, vehicleType:e.target.value}))} className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary">
-                  {vehicleTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium">Vehicle Details</h3>
+                <input
+                  placeholder="Plate (e.g. TN-09-AB-1234)"
+                  required
+                  value={newVehicle.plate}
+                  onChange={(e) =>
+                    setNewVehicle((v) => ({ ...v, plate: e.target.value }))
+                  }
+                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                />
+
+                <select
+                  value={newVehicle.vehicleType}
+                  onChange={(e) =>
+                    setNewVehicle((v) => ({
+                      ...v,
+                      vehicleType: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                >
+                  {vehicleTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
                   ))}
                 </select>
                 <select
                   value={selectedParkingArea}
-                  onChange={e=>setSelectedParkingArea(e.target.value)}
+                  onChange={(e) => setSelectedParkingArea(e.target.value)}
                   className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                 >
                   <option value="">Select Parking Area (Optional)</option>
-                  {parkingAreas.filter(area => area.active).map(area => (
-                    <option key={area._id} value={area._id}>
-                      {area.name} ({area.availableSlots || 0}/{area.totalSlots || area.slotAmount} slots available)
-                    </option>
-                  ))}
+                  {parkingAreas
+                    .filter((area) => area.active)
+                    .map((area) => (
+                      <option key={area._id} value={area._id}>
+                        {area.name} ({area.availableSlots || 0}/
+                        {area.totalSlots || area.slotAmount} slots available)
+                      </option>
+                    ))}
                 </select>
-                <input placeholder="Slot (optional)" value={newVehicle.slotName} onChange={e=>setNewVehicle(v=>({...v, slotName:e.target.value}))} className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary" />
-                <button className="w-full px-4 py-2 rounded-md bg-gray-900 text-white">Add User & Vehicle</button>
+                <input
+                  placeholder="Slot (optional)"
+                  value={newVehicle.slotName}
+                  onChange={(e) =>
+                    setNewVehicle((v) => ({ ...v, slotName: e.target.value }))
+                  }
+                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                />
+                <button className="w-full px-4 py-2 rounded-md bg-gray-900 text-white">
+                  Add User & Vehicle
+                </button>
               </div>
             </form>
           </div>
         )}
 
-        {tab==='vehicles' && (
+        {tab === "vehicles" && (
           <div className="p-4">
             <div className="flex items-center justify-between gap-3">
-              <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search vehicles, users, status..." className="w-72 rounded-md border-gray-300 focus:border-primary focus:ring-primary" />
-              <div className="text-sm text-gray-600">Total: {filteredVehicles.length}</div>
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Search vehicles, users, status..."
+                className="w-72 rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+              />
+              <div className="text-sm text-gray-600">
+                Total: {filteredVehicles.length}
+              </div>
             </div>
 
             <div className="mt-4 overflow-x-auto">
@@ -422,34 +536,53 @@ const AdminDashboardPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredVehicles.map(v => (
+                  {filteredVehicles.map((v) => (
                     <tr key={v._id} className="border-b hover:bg-gray-50">
                       <td className="py-3 pr-4 whitespace-nowrap">{v.plate}</td>
-                      <td className="py-3 pr-4">{v.userName || v.userEmail || '-'}</td>
-                      <td className="py-3 pr-4">{v.userPhone || '-'}</td>
-                      <td className="py-3 pr-4 text-center">
-                        {v.parkingAreaId ?
-                          (parkingAreas.find(area => area._id === v.parkingAreaId)?.name || 'Unknown Area') :
-                          (v.slotName || '-')
-                        }
+                      <td className="py-3 pr-4">
+                        {v.userName || v.userEmail || "-"}
                       </td>
-                      <td className="py-3 pr-4 text-center"><span className={`px-2 py-1 rounded-full text-xs ${v.status==='Parked'?'bg-yellow-100 text-yellow-800': v.status==='Paid'?'bg-green-100 text-green-700': v.status==='Exited'?'bg-gray-100 text-gray-700':'bg-blue-100 text-blue-700'}`}>{v.status || '-'}</span></td>
-                      <td className="py-3 pr-4 text-center">{v.paymentStatus || 'Unpaid'}</td>
+                      <td className="py-3 pr-4">{v.userPhone || "-"}</td>
+                      <td className="py-3 pr-4 text-center">
+                        {v.parkingAreaId
+                          ? parkingAreas.find(
+                              (area) => area._id === v.parkingAreaId
+                            )?.name || "Unknown Area"
+                          : v.slotName || "-"}
+                      </td>
+                      <td className="py-3 pr-4 text-center">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            v.status === "Parked"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : v.status === "Paid"
+                              ? "bg-green-100 text-green-700"
+                              : v.status === "Exited"
+                              ? "bg-gray-100 text-gray-700"
+                              : "bg-blue-100 text-blue-700"
+                          }`}
+                        >
+                          {v.status || "-"}
+                        </span>
+                      </td>
+                      <td className="py-3 pr-4 text-center">
+                        {v.paymentStatus || "Unpaid"}
+                      </td>
                       <td className="py-3 pr-4 text-right">
                         <div className="inline-flex gap-2">
-                          {v.paymentStatus !== 'Paid' && (
-                            <button 
-                              className="px-2 py-1 rounded-md border text-xs" 
+                          {v.paymentStatus !== "Paid" && (
+                            <button
+                              className="px-2 py-1 rounded-md border text-xs"
                               onClick={() => markPaid(v)}
                             >
                               Mark as Paid
                             </button>
                           )}
-                          {v.status !== 'Exited' && (
-                            <button 
-                              className="px-2 py-1 rounded-md bg-gray-900 text-white text-xs" 
+                          {v.status !== "Exited" && (
+                            <button
+                              className="px-2 py-1 rounded-md bg-gray-900 text-white text-xs"
                               onClick={() => exitVehicle(v)}
-                              disabled={v.paymentStatus !== 'Paid'}
+                              disabled={v.paymentStatus !== "Paid"}
                             >
                               Exit
                             </button>
@@ -464,7 +597,7 @@ const AdminDashboardPage = () => {
           </div>
         )}
 
-        {tab==='users' && (
+        {tab === "users" && (
           <div className="p-4">
             <div className="mt-4 overflow-x-auto">
               <table className="min-w-full text-sm">
@@ -477,12 +610,14 @@ const AdminDashboardPage = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {usersList.map(u => (
+                  {usersList.map((u) => (
                     <tr key={u._id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 pr-4 whitespace-nowrap">{u.name || '-'}</td>
+                      <td className="py-3 pr-4 whitespace-nowrap">
+                        {u.name || "-"}
+                      </td>
                       <td className="py-3 pr-4">{u.email}</td>
-                      <td className="py-3 pr-4">{u.phone || '-'}</td>
-                      <td className="py-3 pr-4">{u.role || 'user'}</td>
+                      <td className="py-3 pr-4">{u.phone || "-"}</td>
+                      <td className="py-3 pr-4">{u.role || "user"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -491,44 +626,96 @@ const AdminDashboardPage = () => {
           </div>
         )}
 
-        {tab==='slots' && (
+        {tab === "slots" && (
           <div className="p-4">
-            <form onSubmit={createSlot} className="mb-6 p-4 border rounded-lg flex items-end gap-3">
+            <form
+              onSubmit={createSlot}
+              className="mb-6 p-4 border rounded-lg flex items-end gap-3"
+            >
               <div className="flex-grow">
-                <label className="block text-sm font-medium text-gray-700">Area Name</label>
-                <input 
+                <label className="block text-sm font-medium text-gray-700">
+                  Area Name
+                </label>
+                <input
                   placeholder="e.g. Basement A"
                   value={newSlot.name}
-                  onChange={e => setNewSlot(s => ({...s, name: e.target.value}))}
+                  onChange={(e) =>
+                    setNewSlot((s) => ({ ...s, name: e.target.value }))
+                  }
                   className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                   required
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700">Total Spots</label>
-                <input 
-                  type="number" 
+                <label className="block text-sm font-medium text-gray-700">
+                  Total Spots
+                </label>
+                <input
+                  type="number"
                   min="1"
                   value={newSlot.total}
-                  onChange={e => setNewSlot(s => ({...s, total: Number(e.target.value)}))}
+                  onChange={(e) =>
+                    setNewSlot((s) => ({ ...s, total: Number(e.target.value) }))
+                  }
                   className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                   required
                 />
               </div>
-              <button className="px-4 py-2 rounded-md bg-gray-900 text-white h-10">Create Slot</button>
+              <button className="px-4 py-2 rounded-md bg-gray-900 text-white h-10">
+                Create Slot
+              </button>
             </form>
 
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {slots.map(s => (
-                <div key={s._id} className="p-5 border rounded-xl bg-white shadow-sm">
-                  <div className="text-sm text-gray-500">{s.area || s.name || 'Area'}</div>
-                  <div className="mt-2 text-2xl font-bold text-gray-900">{s.free ?? 0} / {s.total ?? 0} free</div>
+              {slots.map((s) => (
+                <div
+                  key={s._id}
+                  className="p-5 border rounded-xl bg-white shadow-sm"
+                >
+                  <div className="text-sm text-gray-500">
+                    {s.area || s.name || "Area"}
+                  </div>
+                  <div className="mt-2 text-2xl font-bold text-gray-900">
+                    {s.free ?? 0} / {s.total ?? 0} free
+                  </div>
                   <div className="mt-3 h-2 bg-gray-100 rounded">
-                    <div className="h-2 bg-green-500 rounded" style={{width: `${(Math.max(0, Math.min(1,(s.free||0)/(s.total||1))))*100}%`}} />
+                    <div
+                      className="h-2 bg-green-500 rounded"
+                      style={{
+                        width: `${
+                          Math.max(
+                            0,
+                            Math.min(1, (s.free || 0) / (s.total || 1))
+                          ) * 100
+                        }%`,
+                      }}
+                    />
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-2">
-                    <input type="number" min="0" defaultValue={s.total ?? 0} onBlur={(e)=>updateSlot(s, { total: Number(e.target.value), free: s.free ?? 0 })} className="rounded-md border-gray-300 text-sm" />
-                    <input type="number" min="0" defaultValue={s.free ?? 0} onBlur={(e)=>updateSlot(s, { total: s.total ?? 0, free: Number(e.target.value) })} className="rounded-md border-gray-300 text-sm" />
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={s.total ?? 0}
+                      onBlur={(e) =>
+                        updateSlot(s, {
+                          total: Number(e.target.value),
+                          free: s.free ?? 0,
+                        })
+                      }
+                      className="rounded-md border-gray-300 text-sm"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      defaultValue={s.free ?? 0}
+                      onBlur={(e) =>
+                        updateSlot(s, {
+                          total: s.total ?? 0,
+                          free: Number(e.target.value),
+                        })
+                      }
+                      className="rounded-md border-gray-300 text-sm"
+                    />
                   </div>
                 </div>
               ))}
@@ -536,47 +723,55 @@ const AdminDashboardPage = () => {
           </div>
         )}
 
-        {tab==='payments' && (
+        {tab === "payments" && (
           <div className="p-4">
             <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Payment History</h2>
-              <p className="text-sm text-gray-600 mt-1">Complete payment records from all transactions (View Only)</p>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Payment History
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Complete payment records from all transactions (View Only)
+              </p>
             </div>
 
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
                   <tr className="text-left text-gray-600 border-b bg-gray-50">
-                    <th className="py-3 px-4 font-medium">Vehicle Number Plate</th>
+                    <th className="py-3 px-4 font-medium">
+                      Vehicle Number Plate
+                    </th>
                     <th className="py-3 px-4 font-medium">Vehicle Type</th>
                     <th className="py-3 px-4 font-medium">User Name</th>
                     <th className="py-3 px-4 font-medium">User Email</th>
                     <th className="py-3 px-4 font-medium">Payment Amount</th>
-                    <th className="py-3 px-4 font-medium">Payment Date & Time</th>
+                    <th className="py-3 px-4 font-medium">
+                      Payment Date & Time
+                    </th>
                     <th className="py-3 px-4 font-medium">Payment Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {payments.map(p => (
+                  {payments.map((p) => (
                     <tr key={p._id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4">
                         <div className="font-medium text-gray-900">
-                          {p.vehiclePlate || '-'}
+                          {p.vehiclePlate || "-"}
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
-                          {p.vehicleType || '-'}
+                          {p.vehicleType || "-"}
                         </span>
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-gray-900">
-                          {p.userName || 'N/A'}
+                          {p.userName || "N/A"}
                         </div>
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-sm text-gray-600">
-                          {p.userEmail || '-'}
+                          {p.userEmail || "-"}
                         </div>
                       </td>
                       <td className="py-3 px-4">
@@ -586,23 +781,33 @@ const AdminDashboardPage = () => {
                       </td>
                       <td className="py-3 px-4">
                         <div className="text-sm text-gray-900">
-                          {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '-'}
+                          {p.paymentDate
+                            ? new Date(p.paymentDate).toLocaleDateString()
+                            : p.createdAt
+                            ? new Date(p.createdAt).toLocaleDateString()
+                            : "-"}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {p.paymentDate ? new Date(p.paymentDate).toLocaleTimeString() : p.createdAt ? new Date(p.createdAt).toLocaleTimeString() : '-'}
+                          {p.paymentDate
+                            ? new Date(p.paymentDate).toLocaleTimeString()
+                            : p.createdAt
+                            ? new Date(p.createdAt).toLocaleTimeString()
+                            : "-"}
                         </div>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          p.status === 'Success' || p.status === 'Paid'
-                            ? 'bg-green-100 text-green-700'
-                            : p.status === 'Failed'
-                            ? 'bg-red-100 text-red-700'
-                            : p.status === 'Pending'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {p.status || 'Pending'}
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            p.status === "Success" || p.status === "Paid"
+                              ? "bg-green-100 text-green-700"
+                              : p.status === "Failed"
+                              ? "bg-red-100 text-red-700"
+                              : p.status === "Pending"
+                              ? "bg-yellow-100 text-yellow-700"
+                              : "bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          {p.status || "Pending"}
                         </span>
                       </td>
                     </tr>
@@ -614,18 +819,32 @@ const AdminDashboardPage = () => {
             {payments.length === 0 && (
               <div className="text-center py-8 text-gray-500">
                 <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
-                  <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z" />
+                  <svg
+                    className="h-6 w-6 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z"
+                    />
                   </svg>
                 </div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">No payment records yet</h3>
-                <p className="text-sm text-gray-500">Payment records will appear here once users make payments.</p>
+                <h3 className="text-sm font-medium text-gray-900 mb-2">
+                  No payment records yet
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Payment records will appear here once users make payments.
+                </p>
               </div>
             )}
           </div>
         )}
 
-        {tab==='parking-areas' && (
+        {tab === "parking-areas" && (
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="p-4 border-b">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -654,16 +873,26 @@ const AdminDashboardPage = () => {
                 </div>
               </div>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Slots</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Address
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Slots
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Created
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -674,30 +903,45 @@ const AdminDashboardPage = () => {
                           <div className="flex items-center">
                             {area.photo && (
                               <div className="flex-shrink-0 h-10 w-10 mr-3">
-                                <img className="h-10 w-10 rounded-full object-cover" src={area.photo} alt={area.name} />
+                                <img
+                                  className="h-10 w-10 rounded-full object-cover"
+                                  src={area.photo}
+                                  alt={area.name}
+                                />
                               </div>
                             )}
                             <div>
-                              <div className="text-sm font-medium text-gray-900">{area.name}</div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {area.name}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{area.address}</div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
-                            <span className="font-medium">{area.availableSlots || 0}</span>
-                            <span className="text-gray-500"> / {area.totalSlots || area.slotAmount}</span>
+                            {area.address}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            area.active 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-gray-100 text-gray-800'
-                          }`}>
-                            {area.active ? 'Active' : 'Inactive'}
+                          <div className="text-sm text-gray-900">
+                            <span className="font-medium">
+                              {area.availableSlots || 0}
+                            </span>
+                            <span className="text-gray-500">
+                              {" "}
+                              / {area.totalSlots || area.slotAmount}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              area.active
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {area.active ? "Active" : "Inactive"}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -707,7 +951,10 @@ const AdminDashboardPage = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                      <td
+                        colSpan="5"
+                        className="px-6 py-4 text-center text-sm text-gray-500"
+                      >
                         No parking areas found
                       </td>
                     </tr>
@@ -718,48 +965,76 @@ const AdminDashboardPage = () => {
           </div>
         )}
 
-        {tab==='parking-charges' && (
+        {tab === "parking-charges" && (
           <div className="p-4">
             <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Manage Parking Charges</h2>
-              
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Manage Parking Charges
+              </h2>
+
               {/* Add/Edit Form */}
-              <form onSubmit={createOrUpdateParkingCharge} className="bg-gray-50 p-4 rounded-lg border mb-6">
+              <form
+                onSubmit={createOrUpdateParkingCharge}
+                className="bg-gray-50 p-4 rounded-lg border mb-6"
+              >
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Vehicle Type</label>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Vehicle Type
+                    </label>
                     <select
                       value={newCharge.vehicleType}
-                      onChange={e => setNewCharge(c => ({...c, vehicleType: e.target.value}))}
+                      onChange={(e) =>
+                        setNewCharge((c) => ({
+                          ...c,
+                          vehicleType: e.target.value,
+                        }))
+                      }
                       className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                       required
                       disabled={editingCharge}
                     >
                       <option value="">Select Type</option>
-                      {vehicleTypes.map(type => (
-                        <option key={type} value={type}>{type}</option>
+                      {vehicleTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
                       ))}
                     </select>
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Amount (₹)</label>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Amount (₹)
+                    </label>
                     <input
                       type="number"
                       min="0"
                       step="0.01"
                       value={newCharge.amount}
-                      onChange={e => setNewCharge(c => ({...c, amount: parseFloat(e.target.value)}))}
+                      onChange={(e) =>
+                        setNewCharge((c) => ({
+                          ...c,
+                          amount: parseFloat(e.target.value),
+                        }))
+                      }
                       className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                       required
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Duration</label>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Duration
+                    </label>
                     <select
                       value={newCharge.duration}
-                      onChange={e => setNewCharge(c => ({...c, duration: e.target.value}))}
+                      onChange={(e) =>
+                        setNewCharge((c) => ({
+                          ...c,
+                          duration: e.target.value,
+                        }))
+                      }
                       className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                     >
                       <option value="per hour">Per Hour</option>
@@ -767,20 +1042,24 @@ const AdminDashboardPage = () => {
                       <option value="flat rate">Flat Rate</option>
                     </select>
                   </div>
-                  
+
                   <div className="flex items-end gap-2">
                     <button
                       type="submit"
                       className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
                     >
-                      {editingCharge ? 'Update' : 'Add'} Charge
+                      {editingCharge ? "Update" : "Add"} Charge
                     </button>
                     {editingCharge && (
                       <button
                         type="button"
                         onClick={() => {
                           setEditingCharge(null);
-                          setNewCharge({ vehicleType: '', amount: 0, duration: 'per hour' });
+                          setNewCharge({
+                            vehicleType: "",
+                            amount: 0,
+                            duration: "per hour",
+                          });
                         }}
                         className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
                       >
@@ -789,13 +1068,20 @@ const AdminDashboardPage = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">Description (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Description (Optional)
+                  </label>
                   <input
                     type="text"
-                    value={newCharge.description || ''}
-                    onChange={e => setNewCharge(c => ({...c, description: e.target.value}))}
+                    value={newCharge.description || ""}
+                    onChange={(e) =>
+                      setNewCharge((c) => ({
+                        ...c,
+                        description: e.target.value,
+                      }))
+                    }
                     placeholder="e.g., Standard parking rate for cars"
                     className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                   />
@@ -812,18 +1098,27 @@ const AdminDashboardPage = () => {
                       <th className="py-3 px-4 font-medium">Duration</th>
                       <th className="py-3 px-4 font-medium">Description</th>
                       <th className="py-3 px-4 font-medium">Status</th>
-                      <th className="py-3 px-4 font-medium text-right">Actions</th>
+                      <th className="py-3 px-4 font-medium text-right">
+                        Actions
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {parkingCharges.length > 0 ? (
-                      parkingCharges.map(charge => (
-                        <tr key={charge._id} className="border-b hover:bg-gray-50">
+                      parkingCharges.map((charge) => (
+                        <tr
+                          key={charge._id}
+                          className="border-b hover:bg-gray-50"
+                        >
                           <td className="py-3 px-4">
-                            <span className="font-medium text-gray-900">{charge.vehicleType}</span>
+                            <span className="font-medium text-gray-900">
+                              {charge.vehicleType}
+                            </span>
                           </td>
                           <td className="py-3 px-4">
-                            <span className="text-lg font-semibold text-green-600">₹{charge.amount}</span>
+                            <span className="text-lg font-semibold text-green-600">
+                              ₹{charge.amount}
+                            </span>
                           </td>
                           <td className="py-3 px-4">
                             <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
@@ -831,13 +1126,17 @@ const AdminDashboardPage = () => {
                             </span>
                           </td>
                           <td className="py-3 px-4 text-gray-600">
-                            {charge.description || '-'}
+                            {charge.description || "-"}
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              charge.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                            }`}>
-                              {charge.isActive ? 'Active' : 'Inactive'}
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                charge.isActive
+                                  ? "bg-green-100 text-green-700"
+                                  : "bg-gray-100 text-gray-700"
+                              }`}
+                            >
+                              {charge.isActive ? "Active" : "Inactive"}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
@@ -860,14 +1159,32 @@ const AdminDashboardPage = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="6" className="py-8 text-center text-gray-500">
+                        <td
+                          colSpan="6"
+                          className="py-8 text-center text-gray-500"
+                        >
                           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
-                            <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            <svg
+                              className="h-6 w-6 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                              />
                             </svg>
                           </div>
-                          <h3 className="text-sm font-medium text-gray-900 mb-2">No parking charges set</h3>
-                          <p className="text-sm text-gray-500">Add parking charges for different vehicle types above.</p>
+                          <h3 className="text-sm font-medium text-gray-900 mb-2">
+                            No parking charges set
+                          </h3>
+                          <p className="text-sm text-gray-500">
+                            Add parking charges for different vehicle types
+                            above.
+                          </p>
                         </td>
                       </tr>
                     )}
