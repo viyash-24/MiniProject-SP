@@ -12,6 +12,9 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import ParkingAreasPage from './pages/ParkingAreasPage';
 import ParkingAreaDetailsPage from './pages/ParkingAreaDetailsPage';
 import AdminSlotManagementPage from './pages/AdminSlotManagementPage';
+import AboutUsPage from './pages/AboutUsPage';
+import ContactUsPage from './pages/ContactUsPage';
+import FAQsPage from './pages/FAQsPage';
 import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
@@ -73,7 +76,10 @@ function App() {
                 <ParkingAreaDetailsPage />
               </ProtectedRoute>
             } />
-            
+            <Route path="/about" element={<AboutUsPage />} />
+            <Route path="/contact" element={<ContactUsPage />} />
+            <Route path="/faqs" element={<FAQsPage />} />
+
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>

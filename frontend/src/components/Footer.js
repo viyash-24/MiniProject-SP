@@ -63,17 +63,17 @@ const Footer = () => {
           </div>
 
           <div>
-            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Support</h4>
+            <h4 className="text-sm font-bold text-white uppercase tracking-wider mb-4">Company</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
-                <span className="h-1 w-1 bg-blue-500 rounded-full"></span>Help Center
-              </a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+              <li><Link to="/about" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+                <span className="h-1 w-1 bg-blue-500 rounded-full"></span>About Us
+              </Link></li>
+              <li><Link to="/contact" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                 <span className="h-1 w-1 bg-blue-500 rounded-full"></span>Contact Us
-              </a></li>
-              <li><a href="#" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
+              </Link></li>
+              <li><Link to="/faqs" className="text-gray-400 hover:text-white transition-colors text-sm flex items-center gap-2">
                 <span className="h-1 w-1 bg-blue-500 rounded-full"></span>FAQs
-              </a></li>
+              </Link></li>
             </ul>
           </div>
 
