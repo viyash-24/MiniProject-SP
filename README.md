@@ -67,7 +67,7 @@ This Smart Parking System is ideal for busy town areas where parking is limited.
 
 1. Clone the repository:  
    ```bash
-   git clone https://github.com/yourusername/smart-parking-system.git
+   git clone https://github.com/viyash-24/MiniProject-SP.git
 
 ---
    
