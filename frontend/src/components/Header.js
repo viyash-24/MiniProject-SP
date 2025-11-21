@@ -28,7 +28,7 @@ const Header = () => {
 
   const navLinkClass = ({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium ${isActive ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary hover:bg-gray-100'}`;
   
-  // Updated to highlight Admin for any /admin/* route
+  
   const adminNavLinkClass = ({ isActive }) => {
     const isAdminRoute = location.pathname.startsWith('/admin');
     return `px-3 py-2 rounded-md text-sm font-medium ${isAdminRoute ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary hover:bg-gray-100'}`;

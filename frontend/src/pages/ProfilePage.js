@@ -27,7 +27,7 @@ const ProfilePage = () => {
         await updateEmail(auth.currentUser, email);
       }
 
-      // Update password if provided
+      
       if (password) {
         await updatePassword(auth.currentUser, password);
       }
@@ -75,5 +75,4 @@ const ProfilePage = () => {
     </div>
   );
 };
-
 export default ProfilePage;
