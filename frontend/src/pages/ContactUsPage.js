@@ -85,7 +85,7 @@ const ContactUsPage = () => {
             </form>
           </div>
 
-          {/* Contact Info */}
+          
           <div className="space-y-6">
             <div className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg p-8">
               <h2 className="text-2xl font-bold mb-4">Contact Information</h2>
