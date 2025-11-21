@@ -8,6 +8,7 @@ export const env = {
   EMAIL_USER: process.env.EMAIL_USER || 'viyashviyashan24@gmail.com',
   EMAIL_PASS: process.env.EMAIL_PASS || 'ahiw cgys osyn euix',
   ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@gmail.com',
+  ADMIN_EMAIL_ALLOWLIST: process.env.ADMIN_EMAIL_ALLOWLIST || process.env.ADMIN_EMAIL || 'admin@gmail.com',
   
   // Firebase Admin SDK Configuration
   FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'smart-parking-a80b9',
