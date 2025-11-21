@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import useSlotManagement from '../hooks/useSlotManagement';
+import SelectSlotPopup from '../components/SelectSlotPopup';
 
 const AdminSlotManagementPage = () => {
   const {
@@ -29,6 +30,7 @@ const AdminSlotManagementPage = () => {
   });
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState('');
+  const [showSlotPopup, setShowSlotPopup] = useState(false);
 
   const handleParkingAreaChange = async (parkingAreaId) => {
     if (!parkingAreaId) {
@@ -285,10 +287,26 @@ const AdminSlotManagementPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Slot Number
                   </label>
+                  <div className="flex items-center space-x-3">
+                    <input
+                      type="text"
+                      readOnly
+                      value={registerForm.slotNumber ? `Slot ${registerForm.slotNumber}` : 'No slot selected'}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSlotPopup(true)}
+                      disabled={!registerForm.parkingAreaId}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                    >
+                      Select Slot
+                    </button>
+                  </div>
                   <select
                     value={registerForm.slotNumber}
                     onChange={(e) => setRegisterForm(prev => ({ ...prev, slotNumber: parseInt(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="hidden"
                     required
                     disabled={!registerForm.parkingAreaId}
                   >
@@ -408,6 +426,15 @@ const AdminSlotManagementPage = () => {
           </div>
         </div>
       </div>
+      <SelectSlotPopup
+        isOpen={showSlotPopup}
+        slots={availableSlots}
+        onClose={() => setShowSlotPopup(false)}
+        onSelect={(slotNumber) => {
+          setRegisterForm(prev => ({ ...prev, slotNumber }));
+          setShowSlotPopup(false);
+        }}
+      />
     </div>
   );
 };
