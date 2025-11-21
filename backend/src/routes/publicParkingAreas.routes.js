@@ -1,8 +1,9 @@
 import { Router } from 'express';
-import { listPublicParkingAreas } from '../controllers/parkingAreas.controller.js';
+import { listPublicParkingAreas, getPublicParkingArea } from '../controllers/parkingAreas.controller.js';
 
 const r = Router();
 
 r.get('/', listPublicParkingAreas);
+r.get('/:id', getPublicParkingArea);
 
 export default r;

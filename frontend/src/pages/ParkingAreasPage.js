@@ -408,13 +408,13 @@ const getAuthHeader = useCallback(() => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
-                        {area.location.latitude.toFixed(6)}, {area.location.longitude.toFixed(6)}
+                        {area.location?.latitude != null ? Number(area.location.latitude).toFixed(6) : 'N/A'}, {area.location?.longitude != null ? Number(area.location.longitude).toFixed(6) : 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="text-sm text-gray-900">
-                        <span className="font-medium">{area.availableSlots || 0}</span>
-                        <span className="text-gray-500"> / {area.totalSlots || area.slotAmount}</span>
+                        <span className="font-medium">{area.availableSlots ?? 0}</span>
+                        <span className="text-gray-500"> / {area.totalSlots ?? area.slotAmount ?? 'N/A'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
