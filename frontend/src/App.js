@@ -28,7 +28,7 @@ const NavigationHandler = () => {
   React.useEffect(() => {
     // stop the loading indicator when route changes
     setLoading(false);
-    // ensure page is at top after navigation
+   
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location.pathname, setLoading]);
   return null;
