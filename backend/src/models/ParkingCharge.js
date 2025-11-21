@@ -41,7 +41,6 @@ const parkingChargeSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
-parkingChargeSchema.index({ vehicleType: 1 });
 parkingChargeSchema.index({ isActive: 1 });
 
 // Method to format charge for display
