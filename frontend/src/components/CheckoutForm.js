@@ -4,10 +4,13 @@ import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js'
 const CheckoutForm = ({ vehicle, paymentIntentId, onSuccessfulPayment }) => {
   const stripe = useStripe();
   const elements = useElements();
+
+  // Added state for showing messages
   const [errorMessage, setErrorMessage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
 
+  // Handle submit action when user clicks "Pay Now"
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -22,19 +25,22 @@ const CheckoutForm = ({ vehicle, paymentIntentId, onSuccessfulPayment }) => {
     try {
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
-        confirmParams: {
-          return_url: window.location.href,
-        },
+        confirmParams: { return_url: window.location.href },
         redirect: 'if_required',
       });
 
       if (error) {
         setErrorMessage(error.message);
         console.error('Payment failed:', error);
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+      } 
+      else if (paymentIntent && paymentIntent.status === 'succeeded') {
         setIsComplete(true);
+
+        // Added comment for clarity
+        // Calling parent function to update backend/payment history
         await onSuccessfulPayment(vehicle, 'Stripe', paymentIntentId);
-      } else {
+      } 
+      else {
         setErrorMessage('Payment was not completed. Please try again.');
       }
     } catch (err) {
@@ -45,6 +51,7 @@ const CheckoutForm = ({ vehicle, paymentIntentId, onSuccessfulPayment }) => {
     }
   };
 
+  // Success UI message
   if (isComplete) {
     return (
       <div className="text-center py-8">
@@ -61,6 +68,14 @@ const CheckoutForm = ({ vehicle, paymentIntentId, onSuccessfulPayment }) => {
 
   return (
     <div className="space-y-6">
+
+      {/* NEW small addition: display selected vehicle */}
+      <div className="bg-white p-3 border rounded">
+        <p className="text-sm text-gray-700">
+          <strong>Vehicle:</strong> {vehicle?.name || 'Not specified'}
+        </p>
+      </div>
+
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex">
           <div className="flex-shrink-0">
@@ -70,9 +85,9 @@ const CheckoutForm = ({ vehicle, paymentIntentId, onSuccessfulPayment }) => {
           </div>
           <div className="ml-3">
             <h3 className="text-sm font-medium text-blue-800">Secure Payment</h3>
-            <div className="mt-2 text-sm text-blue-700">
-              <p>Your payment information is encrypted and secure. We use Stripe for processing payments.</p>
-            </div>
+            <p className="mt-2 text-sm text-blue-700">
+              Your payment information is encrypted and secure. We use Stripe for processing payments.
+            </p>
           </div>
         </div>
       </div>
@@ -80,20 +95,15 @@ const CheckoutForm = ({ vehicle, paymentIntentId, onSuccessfulPayment }) => {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="bg-gray-50 p-4 rounded-lg">
           <h4 className="text-sm font-medium text-gray-900 mb-2">Payment Details</h4>
-          <PaymentElement 
-            options={{
-              layout: 'tabs'
-            }}
-          />
+          {/* Stripe UI */}
+          <PaymentElement options={{ layout: 'tabs' }} />
         </div>
 
-        <button 
-          disabled={isProcessing || !stripe || !elements} 
+        <button
+          disabled={isProcessing || !stripe || !elements}
           className="w-full px-4 py-3 rounded-md bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
-          <span>
-            {isProcessing ? 'Processing Payment...' : 'Pay Now'}
-          </span>
+          <span>{isProcessing ? 'Processing Payment...' : 'Pay Now'}</span>
         </button>
 
         {errorMessage && (
@@ -106,9 +116,7 @@ const CheckoutForm = ({ vehicle, paymentIntentId, onSuccessfulPayment }) => {
               </div>
               <div className="ml-3">
                 <h3 className="text-sm font-medium text-red-800">Payment Error</h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{errorMessage}</p>
-                </div>
+                <p className="mt-2 text-sm text-red-700">{errorMessage}</p>
               </div>
             </div>
           </div>

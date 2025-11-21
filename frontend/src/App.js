@@ -1,8 +1,10 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import { LoadingProvider, useLoading } from './context/LoadingContext';
+import LoadingBar from './components/LoadingBar';
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -19,6 +21,18 @@ import NotFoundPage from './pages/NotFoundPage';
 import ProtectedRoute from './routes/ProtectedRoute';
 import { useAuth } from './context/AuthContext';
 
+const NavigationHandler = () => {
+  const location = useLocation();
+  const { setLoading } = useLoading();
+  React.useEffect(() => {
+    // stop the loading indicator when route changes
+    setLoading(false);
+    // ensure page is at top after navigation
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [location.pathname, setLoading]);
+  return null;
+};
+
 function App() {
   // Wrapper that redirects admins away from user pages while leaving others unaffected
   const AdminRedirect = ({ children }) => {
@@ -29,11 +43,14 @@ function App() {
 
   return (
     <Router>
-      <div className="flex flex-col min-h-screen">
-        <Toaster position="top-center" reverseOrder={false} />
-        <Header />
-        <main className="flex-grow">
-          <Routes>
+      <LoadingProvider>
+        <div className="flex flex-col min-h-screen">
+          <Toaster position="top-center" reverseOrder={false} />
+          <LoadingBar />
+          <NavigationHandler />
+          <Header />
+          <main className="flex-grow">
+            <Routes>
             <Route path="/" element={
               <AdminRedirect>
                 <HomePage />
@@ -82,9 +99,10 @@ function App() {
 
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
-        </main>
-        <Footer />
-      </div>
+          </main>
+          <Footer />
+        </div>
+      </LoadingProvider>
     </Router>
   );
 }
