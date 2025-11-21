@@ -219,3 +219,31 @@ export async function listPublicParkingAreas(req, res) {
     });
   }
 }
+
+export async function getPublicParkingArea(req, res) {
+  try {
+    const { id } = req.params;
+    const parkingArea = await ParkingArea.findById(id).lean();
+
+    if (!parkingArea) {
+      return res.status(404).json({ success: false, error: 'Parking area not found' });
+    }
+
+    // Count vehicles that are currently parked or paid (occupied slots)
+    const Vehicle = (await import('../models/Vehicle.js')).Vehicle;
+    const occupiedSlots = await Vehicle.countDocuments({
+      parkingAreaId: parkingArea._id,
+      status: { $in: ['Parked', 'Paid'] }
+    });
+
+    const availableSlots = Math.max(0, (parkingArea.totalSlots || parkingArea.slotAmount || 0) - occupiedSlots);
+
+    res.json({ success: true, data: { ...parkingArea, occupiedSlots, availableSlots } });
+  } catch (error) {
+    console.error('Error in getPublicParkingArea:', error);
+    if (error.name === 'CastError') {
+      return res.status(400).json({ success: false, error: 'Invalid parking area id' });
+    }
+    res.status(500).json({ success: false, error: 'Failed to fetch parking area' });
+  }
+}
