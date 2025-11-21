@@ -67,7 +67,7 @@ export async function updateProfile(req, res) {
   }
 }
 
-//logout 
+
 export async function logout(req, res) {
   res.clearCookie('token');
   res.json({ ok: true });
