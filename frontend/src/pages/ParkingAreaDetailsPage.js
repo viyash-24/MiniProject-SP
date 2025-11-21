@@ -16,7 +16,7 @@ const ParkingAreaDetailsPage = () => {
 
   const getAuthHeader = () => {
     const headers = { 'Content-Type': 'application/json' };
-    // Include admin email bypass header for admin panel requests (matches backend middleware)
+    // Include admin email bypass header for admin panel requests
     if (user?.email) {
       headers['x-admin-email'] = (user.email || '').toLowerCase();
     }
