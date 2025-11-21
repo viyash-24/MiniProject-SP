@@ -28,7 +28,7 @@ const Header = () => {
 
   const navLinkClass = ({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium ${isActive ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary hover:bg-gray-100'}`;
   
-  // Updated to highlight Admin for any /admin/* route
+  
   const adminNavLinkClass = ({ isActive }) => {
     const isAdminRoute = location.pathname.startsWith('/admin');
     return `px-3 py-2 rounded-md text-sm font-medium ${isAdminRoute ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary hover:bg-gray-100'}`;
@@ -86,6 +86,7 @@ const Header = () => {
                         {user.email}
                       </div>
                     </div>
+                    <Link to="/profile" onClick={() => setProfileDropdown(false)} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Profile</Link>
                     <button 
                       onClick={() => { logout(); setProfileDropdown(false); }} 
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -123,12 +124,15 @@ const Header = () => {
                   <div className="px-3 py-2 text-xs text-gray-500">
                     {user.email}
                   </div>
-                  <button 
-                    onClick={() => { logout(); setOpen(false); }} 
-                    className="w-full mt-1 px-3 py-2 text-sm font-medium border rounded-md"
-                  >
-                    Sign out
-                  </button>
+                  <div className="flex gap-2">
+                    <Link to="/profile" onClick={() => setOpen(false)} className="flex-1 mt-1 px-3 py-2 text-sm font-medium border rounded-md text-center">Profile</Link>
+                    <button 
+                      onClick={() => { logout(); setOpen(false); }} 
+                      className="flex-1 mt-1 px-3 py-2 text-sm font-medium border rounded-md"
+                    >
+                      Sign out
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
