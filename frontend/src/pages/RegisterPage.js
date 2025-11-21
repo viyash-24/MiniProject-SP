@@ -25,7 +25,7 @@ const RegisterPage = () => {
     setError('');
     try {
       await registerWithEmail(form.name, form.email, form.password, form.phone);
-      navigate('/dashboard');
+      navigate('/');
     } catch (err) {
       setError(err?.message || 'Failed to create account');
     }
