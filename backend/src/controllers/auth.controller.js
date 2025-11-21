@@ -31,6 +31,42 @@ export async function me(req, res) {
   res.json({ user });
 }
 
+export async function updateProfile(req, res) {
+  try {
+    const { name, email, phone, photoUrl, password } = req.body;
+    const userId = req.user.id;
+    const user = await User.findById(userId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    if (email && email.toLowerCase() !== user.email) {
+      const existing = await User.findOne({ email: email.toLowerCase() });
+      if (existing) return res.status(400).json({ error: 'Email already in use' });
+      user.email = email.toLowerCase();
+    }
+
+    if (name !== undefined) user.name = name;
+    if (phone !== undefined) user.phone = phone;
+    if (photoUrl !== undefined) user.photoUrl = photoUrl;
+    if (password) user.passwordHash = await hashPassword(password);
+
+    await user.save();
+
+    const safeUser = {
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      role: user.role,
+      photoUrl: user.photoUrl
+    };
+
+    res.json({ user: safeUser });
+  } catch (err) {
+    console.error('updateProfile error', err);
+    res.status(500).json({ error: 'Unable to update profile' });
+  }
+}
+
 //logout 
 export async function logout(req, res) {
   res.clearCookie('token');
