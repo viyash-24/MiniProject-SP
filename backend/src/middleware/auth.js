@@ -1,13 +1,21 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
 
+const adminAllowlist = String(env.ADMIN_EMAIL_ALLOWLIST || '')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
 export function authRequired(req, res, next) {
   try {
     // Admin email bypass (for Firebase-fronted admin panel)
     const adminEmailHeader = req.headers['x-admin-email'];
-    if (adminEmailHeader && String(adminEmailHeader).toLowerCase() === String(env.ADMIN_EMAIL).toLowerCase()) {
-      req.user = { id: 'admin', role: 'admin', email: env.ADMIN_EMAIL };
-      return next();
+    if (adminEmailHeader) {
+      const email = String(adminEmailHeader).toLowerCase();
+      if (adminAllowlist.includes(email)) {
+        req.user = { id: email, role: 'admin', email };
+        return next();
+      }
     }
 
     // User email bypass for authenticated end-users (from frontend)

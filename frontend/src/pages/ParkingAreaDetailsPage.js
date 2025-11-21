@@ -6,7 +6,7 @@ import MapPicker from '../components/MapPicker';
 
 const ParkingAreaDetailsPage = () => {
   const { id } = useParams();
-  const { user, isAdmin, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [parkingArea, setParkingArea] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -16,12 +16,10 @@ const ParkingAreaDetailsPage = () => {
 
   const getAuthHeader = () => {
     const headers = { 'Content-Type': 'application/json' };
-    // Include admin email bypass header for admin panel requests (matches backend middleware)
-    if (user?.email) {
+    if (isAdmin && user?.email) {
       headers['x-admin-email'] = (user.email || '').toLowerCase();
-    }
-    if (user?.token) {
-      headers['Authorization'] = `Bearer ${user.token}`;
+    } else if (user?.email) {
+      headers['x-user-email'] = (user.email || '').toLowerCase();
     }
     return headers;
   };
@@ -36,17 +34,13 @@ const ParkingAreaDetailsPage = () => {
     const fetchParkingArea = async () => {
       setIsLoading(true);
       try {
-        // If the user has admin access, use admin endpoint (requires auth).
-        // Otherwise use the public endpoint that doesn't require auth.
-        const isAdminUser = !!isAdmin;
-        const endpoint = isAdminUser ? `${API_URL}/parking-areas/${id}` : `${API_URL}/public/parking-areas/${id}`;
+        const endpoint = isAdmin
+          ? `${API_URL}/parking-areas/${id}`
+          : `${API_URL}/public/parking-areas/${id}`;
+        const requestInit = isAdmin ? { headers: getAuthHeader() } : {};
+        const response = await fetch(endpoint, requestInit);
 
-        const opts = isAdminUser ? { headers: getAuthHeader() } : { headers: { 'Content-Type': 'application/json' } };
-
-        const response = await fetch(endpoint, opts);
-
-        if (isAdminUser && response.status === 401) {
-          // Only treat 401 as session-expired for admin requests
+        if (response.status === 401) {
           logout();
           navigate('/login');
           toast.error('Session expired. Please log in again.');
@@ -56,18 +50,17 @@ const ParkingAreaDetailsPage = () => {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-          // For public endpoint, response may use `success: false` format
-          const message = data.error || data.message || (data.success === false && data.error) || 'Failed to fetch parking area details';
-          throw new Error(message);
+          throw new Error(data.error || data.message || 'Failed to fetch parking area details');
         }
 
-        // Normalize response shape: admin returns { parkingArea }, public returns { data }
-        const areaObj = data.parkingArea || data.data || data;
-
-        setParkingArea(areaObj);
-
-        // Fetch available slots using the fetched parking area (avoid stale state)
-        await fetchAvailableSlots(areaObj);
+        const normalizedParkingArea = data.parkingArea ?? data.data?.parkingArea ?? null;
+        setParkingArea(normalizedParkingArea);
+        setAvailableSlots(
+          normalizedParkingArea?.availableSlots ??
+          normalizedParkingArea?.slotAmount ??
+          normalizedParkingArea?.totalSlots ??
+          0
+        );
       } catch (error) {
         console.error('Error fetching parking area details:', error);
         toast.error(error.message || 'Failed to fetch parking area details');
@@ -77,40 +70,8 @@ const ParkingAreaDetailsPage = () => {
       }
     };
 
-    const fetchAvailableSlots = async (area) => {
-      try {
-        // If the area object already contains availableSlots (public endpoint), use it
-        if (area?.availableSlots != null) {
-          setAvailableSlots(area.availableSlots);
-          return;
-        }
-
-        // Otherwise, call vehicles listing to compute occupied slots (admin side)
-        const vehiclesResponse = await fetch(`${API_URL}/vehicles`, {
-          headers: getAuthHeader(),
-        });
-
-        if (vehiclesResponse.ok) {
-          const vehiclesData = await vehiclesResponse.json();
-          const occupiedSlots = vehiclesData.vehicles?.filter(v =>
-            v.status === 'Parked' || v.status === 'Paid'
-          ).length || 0;
-
-          if (area) {
-            setAvailableSlots(Math.max(0, (area.slotAmount || area.totalSlots || 0) - occupiedSlots));
-          }
-        } else {
-          // fallback to using area totals
-          if (area) setAvailableSlots(area.slotAmount || area.totalSlots || 0);
-        }
-      } catch (error) {
-        console.error('Error fetching available slots:', error);
-        if (area) setAvailableSlots(area.slotAmount || area.totalSlots || 0);
-      }
-    };
-
     fetchParkingArea();
-  }, [id, user, navigate, logout, API_URL]);
+  }, [id, user, navigate, logout, API_URL, isAdmin]);
 
   if (isLoading) {
     return <div className="text-center p-8">Loading...</div>;
@@ -138,16 +99,17 @@ const ParkingAreaDetailsPage = () => {
           {/* Photo */}
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
             {parkingArea.photo ? (
-              <img
-                src={parkingArea.photo}
-                alt={parkingArea.name}
+              <img 
+                src={parkingArea.photo} 
+                alt={parkingArea.name} 
                 className="w-full h-64 object-cover"
                 onError={(e) => {
-                  e.currentTarget.style.display = 'none';
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
                 }}
               />
             ) : null}
-            <div
+            <div 
               className={`h-64 flex items-center justify-center bg-gray-100 ${parkingArea.photo ? 'hidden' : 'flex'}`}
               style={{ display: parkingArea.photo ? 'none' : 'flex' }}
             >
@@ -182,7 +144,9 @@ const ParkingAreaDetailsPage = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <span className="font-medium text-gray-700">Total Slots:</span>
-                  <p className="text-2xl font-bold text-gray-900">{parkingArea.slotAmount}</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {parkingArea.slotAmount || parkingArea.totalSlots || '—'}
+                  </p>
                 </div>
                 <div>
                   <span className="font-medium text-gray-700">Available Slots:</span>
@@ -210,18 +174,14 @@ const ParkingAreaDetailsPage = () => {
             <h2 className="text-xl font-semibold mb-4">Location</h2>
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-2">
-                Coordinates: {parkingArea.location?.latitude != null ? Number(parkingArea.location.latitude).toFixed(6) : 'N/A'}, {parkingArea.location?.longitude != null ? Number(parkingArea.location.longitude).toFixed(6) : 'N/A'}
+                Coordinates: {parkingArea.location.latitude.toFixed(6)}, {parkingArea.location.longitude.toFixed(6)}
               </p>
             </div>
-            {parkingArea.location ? (
-              <MapPicker
-                latitude={Number(parkingArea.location.latitude)}
-                longitude={Number(parkingArea.location.longitude)}
-                onLocationChange={() => {}} // Read-only for details page
-              />
-            ) : (
-              <p className="text-sm text-gray-500">Location not available</p>
-            )}
+            <MapPicker 
+              latitude={parkingArea.location.latitude}
+              longitude={parkingArea.location.longitude}
+              onLocationChange={() => {}} // Read-only for details page
+            />
           </div>
 
           {/* Quick Actions */}

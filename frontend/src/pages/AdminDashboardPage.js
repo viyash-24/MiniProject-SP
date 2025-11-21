@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
+import SelectSlotPopup from "../components/SelectSlotPopup";
 
 const TabButton = ({ active, onClick, children }) => (
   <button
@@ -41,6 +42,9 @@ const AdminDashboardPage = () => {
     duration: "per hour",
   });
   const [editingCharge, setEditingCharge] = useState(null);
+  const [availableSlots, setAvailableSlots] = useState([]);
+  const [showSlotPopup, setShowSlotPopup] = useState(false);
+  const [selectedSlotNumber, setSelectedSlotNumber] = useState(null);
   const vehicleTypes = [
     "Car",
     "Bike",
@@ -122,6 +126,28 @@ const AdminDashboardPage = () => {
     );
   }, [parkingAreas, q]);
 
+  const fetchAvailableSlotsForArea = async (parkingAreaId) => {
+    if (!parkingAreaId) {
+      setAvailableSlots([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `${API_URL}/slot-management/parking-areas/${parkingAreaId}/available-slots`
+      );
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to fetch available slots");
+      }
+      setAvailableSlots(data.availableSlots || []);
+    } catch (error) {
+      console.error("Error fetching available slots:", error);
+      toast.error(error.message || "Failed to fetch available slots");
+      setAvailableSlots([]);
+    }
+  };
+
   const createUserAndVehicle = async (e) => {
     e.preventDefault();
     if (!newUser.email || !newVehicle.plate) return;
@@ -155,28 +181,73 @@ const AdminDashboardPage = () => {
         });
       }
 
-      // create vehicle with user details
-      const vehicleRes = await fetch(`${API_URL}/vehicles`, {
-        method: "POST",
-        headers: authHeader,
-        body: JSON.stringify({
-          plate: newVehicle.plate,
-          slotName: newVehicle.slotName || "",
-          userEmail: newUser.email,
-          userName: newUser.name,
-          userPhone: newUser.phone,
-          vehicleType: newVehicle.vehicleType,
-          parkingAreaId: selectedParkingArea || undefined,
-        }),
-      });
-      const vehicleData = await vehicleRes.json();
-      if (!vehicleRes.ok)
-        throw new Error(vehicleData.error || "Failed to create vehicle");
-      setVehicles((prev) => [vehicleData.vehicle, ...prev]);
+      if (selectedParkingArea && selectedSlotNumber !== null) {
+        const slotRes = await fetch(`${API_URL}/slot-management/register-user`, {
+          method: "POST",
+          headers: authHeader,
+          body: JSON.stringify({
+            plate: newVehicle.plate,
+            userEmail: newUser.email,
+            userName: newUser.name,
+            userPhone: newUser.phone,
+            vehicleType: newVehicle.vehicleType,
+            parkingAreaId: selectedParkingArea,
+            slotNumber: selectedSlotNumber,
+            createdBy: user?.email || "admin",
+          }),
+        });
+        const slotData = await slotRes.json();
+        if (!slotRes.ok)
+          throw new Error(slotData.error || "Failed to create vehicle");
+
+        const vehicleFromApi = slotData.vehicle;
+        const normalizedVehicle = vehicleFromApi
+          ? {
+              ...vehicleFromApi,
+              parkingAreaId:
+                vehicleFromApi.parkingAreaId && vehicleFromApi.parkingAreaId._id
+                  ? vehicleFromApi.parkingAreaId._id
+                  : vehicleFromApi.parkingAreaId,
+            }
+          : null;
+
+        if (normalizedVehicle) {
+          setVehicles((prev) => [normalizedVehicle, ...prev]);
+        }
+
+        const updatedArea = slotData.parkingArea;
+        if (updatedArea && updatedArea._id) {
+          setParkingAreas((prev) =>
+            prev.map((area) =>
+              area._id === updatedArea._id ? { ...area, ...updatedArea } : area
+            )
+          );
+        }
+      } else {
+        const vehicleRes = await fetch(`${API_URL}/vehicles`, {
+          method: "POST",
+          headers: authHeader,
+          body: JSON.stringify({
+            plate: newVehicle.plate,
+            slotName: newVehicle.slotName || "",
+            userEmail: newUser.email,
+            userName: newUser.name,
+            userPhone: newUser.phone,
+            vehicleType: newVehicle.vehicleType,
+            parkingAreaId: selectedParkingArea || undefined,
+          }),
+        });
+        const vehicleData = await vehicleRes.json();
+        if (!vehicleRes.ok)
+          throw new Error(vehicleData.error || "Failed to create vehicle");
+        setVehicles((prev) => [vehicleData.vehicle, ...prev]);
+      }
 
       setNewUser({ name: "", email: "", phone: "" });
       setNewVehicle({ plate: "", slotName: "", vehicleType: "Car" });
       setSelectedParkingArea("");
+      setSelectedSlotNumber(null);
+      setAvailableSlots([]);
       setShowAddForm(false);
 
       // Return success message based on whether user was re-registered or new
@@ -226,15 +297,53 @@ const AdminDashboardPage = () => {
 
   const exitVehicle = async (v) => {
     const promise = async () => {
-      const res = await fetch(`${API_URL}/vehicles/${v._id}/exit`, {
-        method: "POST",
-        headers: authHeader,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to exit vehicle");
+      // Always prefer the slot-management exit to keep slots[] in sync.
+      // If it fails for any reason, fall back to the legacy vehicles exit.
+      let usedFallback = false;
+      let data;
+      try {
+        const res = await fetch(
+          `${API_URL}/slot-management/exit-user/${v._id}`,
+          {
+            method: "PUT",
+            headers: authHeader,
+            body: JSON.stringify({ exitTime: new Date().toISOString() }),
+          }
+        );
+        data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Slot-managed exit failed");
+      } catch (err) {
+        usedFallback = true;
+        const res = await fetch(`${API_URL}/vehicles/${v._id}/exit`, {
+          method: "POST",
+          headers: authHeader,
+        });
+        data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to exit vehicle");
+      }
+
+      // Update the vehicle status locally
       setVehicles((prev) =>
-        prev.map((item) => (item._id === v._id ? data.vehicle : item))
+        prev.map((item) =>
+          item._id === v._id
+            ? {
+                ...item,
+                status: data.vehicle?.status || "Exited",
+                exitTime: data.vehicle?.exitTime || item.exitTime,
+              }
+            : item
+        )
       );
+
+      // If slot-management responded with updated area, sync counts
+      const updatedArea = data.parkingArea;
+      if (!usedFallback && updatedArea && updatedArea._id) {
+        setParkingAreas((prev) =>
+          prev.map((area) =>
+            area._id === updatedArea._id ? { ...area, ...updatedArea } : area
+          )
+        );
+      }
     };
 
     toast.promise(promise(), {
@@ -479,7 +588,13 @@ const AdminDashboardPage = () => {
                 </select>
                 <select
                   value={selectedParkingArea}
-                  onChange={(e) => setSelectedParkingArea(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedParkingArea(value);
+                    setSelectedSlotNumber(null);
+                    setAvailableSlots([]);
+                    setNewVehicle((v) => ({ ...v, slotName: "" }));
+                  }}
                   className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                 >
                   <option value="">Select Parking Area (Optional)</option>
@@ -492,14 +607,29 @@ const AdminDashboardPage = () => {
                       </option>
                     ))}
                 </select>
-                <input
-                  placeholder="Slot (optional)"
-                  value={newVehicle.slotName}
-                  onChange={(e) =>
-                    setNewVehicle((v) => ({ ...v, slotName: e.target.value }))
-                  }
-                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                />
+                <div className="flex gap-2">
+                  <input
+                    placeholder="Slot (optional)"
+                    value={newVehicle.slotName}
+                    readOnly
+                    className="flex-1 rounded-md border-gray-300 focus:border-primary focus:ring-primary bg-gray-50"
+                  />
+                  <button
+                    type="button"
+                    disabled={!selectedParkingArea}
+                    onClick={async () => {
+                      if (!selectedParkingArea) {
+                        toast.error("Please select a parking area first");
+                        return;
+                      }
+                      await fetchAvailableSlotsForArea(selectedParkingArea);
+                      setShowSlotPopup(true);
+                    }}
+                    className="px-3 py-2 rounded-md bg-primary text-white disabled:bg-gray-400"
+                  >
+                    Select Slot
+                  </button>
+                </div>
                 <button className="w-full px-4 py-2 rounded-md bg-gray-900 text-white">
                   Add User & Vehicle
                 </button>
@@ -1195,6 +1325,16 @@ const AdminDashboardPage = () => {
           </div>
         )}
       </div>
+      <SelectSlotPopup
+        isOpen={showSlotPopup}
+        slots={availableSlots}
+        onClose={() => setShowSlotPopup(false)}
+        onSelect={(slotNumber) => {
+          setSelectedSlotNumber(slotNumber);
+          setNewVehicle((v) => ({ ...v, slotName: `Slot ${slotNumber}` }));
+          setShowSlotPopup(false);
+        }}
+      />
     </div>
   );
 };

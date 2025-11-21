@@ -10,6 +10,7 @@ export async function listParkingAreas(_req, res) {
   }
 }
 
+
 export async function createParkingArea(req, res) {
   try {
     const { name, address, location, photo, slotAmount } = req.body;
@@ -169,6 +170,7 @@ export async function listPublicParkingAreas(req, res) {
 
           return {
             ...area,
+            slotAmount: area.totalSlots,
             availableSlots,
             occupiedSlots
           };
@@ -177,6 +179,7 @@ export async function listPublicParkingAreas(req, res) {
           // If calculation fails, assume all slots are available
           return {
             ...area,
+            slotAmount: area.totalSlots,
             availableSlots: area.totalSlots,
             occupiedSlots: 0
           };
@@ -225,25 +228,43 @@ export async function getPublicParkingArea(req, res) {
     const { id } = req.params;
     const parkingArea = await ParkingArea.findById(id).lean();
 
-    if (!parkingArea) {
-      return res.status(404).json({ success: false, error: 'Parking area not found' });
+    if (!parkingArea || !parkingArea.active) {
+      return res.status(404).json({
+        success: false,
+        error: 'Parking area not found or inactive'
+      });
     }
 
-    // Count vehicles that are currently parked or paid (occupied slots)
     const Vehicle = (await import('../models/Vehicle.js')).Vehicle;
     const occupiedSlots = await Vehicle.countDocuments({
       parkingAreaId: parkingArea._id,
       status: { $in: ['Parked', 'Paid'] }
     });
 
-    const availableSlots = Math.max(0, (parkingArea.totalSlots || parkingArea.slotAmount || 0) - occupiedSlots);
+    const availableSlots = Math.max(0, parkingArea.totalSlots - occupiedSlots);
 
-    res.json({ success: true, data: { ...parkingArea, occupiedSlots, availableSlots } });
+    res.json({
+      success: true,
+      parkingArea: {
+        ...parkingArea,
+        slotAmount: parkingArea.totalSlots,
+        availableSlots,
+        occupiedSlots
+      }
+    });
   } catch (error) {
     console.error('Error in getPublicParkingArea:', error);
     if (error.name === 'CastError') {
-      return res.status(400).json({ success: false, error: 'Invalid parking area id' });
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid parking area id',
+        details: error.message
+      });
     }
-    res.status(500).json({ success: false, error: 'Failed to fetch parking area' });
+
+    res.status(500).json({
+      success: false,
+      error: 'An unexpected error occurred while fetching parking area details'
+    });
   }
 }
