@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
-  const { loginWithGoogle } = useAuth();
+  const { loginWithGoogle, registerWithEmail } = useAuth();
 
   const [form, setForm] = useState({
     name: '',
@@ -20,10 +20,15 @@ const RegisterPage = () => {
   const onChange = (e) =>
     setForm({ ...form, [e.target.id]: e.target.value });
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    // Placeholder for email/password registration
-    setError('Use Continue with Google for now.');
+    setError('');
+    try {
+      await registerWithEmail(form.name, form.email, form.password, form.phone);
+      navigate('/');
+    } catch (err) {
+      setError(err?.message || 'Failed to create account');
+    }
   };
 
   const onGoogle = async () => {
