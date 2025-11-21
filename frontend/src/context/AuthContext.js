@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth, googleProvider, db } from '../firebase';
-import { onAuthStateChanged, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { onAuthStateChanged, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const AuthContext = createContext({ user: null, isAdmin: false });
 
@@ -58,6 +58,28 @@ export const AuthProvider = ({ children }) => {
     await signInWithPopup(auth, googleProvider);
   };
 
+  // Register using email/password and create a Firestore user document
+  const registerWithEmail = async (name, email, password, phone) => {
+    const e = (email || '').toLowerCase().trim();
+    const userCred = await createUserWithEmailAndPassword(auth, e, password);
+    const u = userCred.user;
+    // set display name on user profile
+    try {
+      await updateProfile(u, { displayName: name });
+    } catch (err) {
+      // non-fatal if updateProfile fails
+    }
+
+    // Create a basic user document in Firestore
+    await setDoc(doc(db, 'users', u.uid), {
+      uid: u.uid,
+      name: name || '',
+      email: e,
+      phone: phone || '',
+      createdAt: new Date().toISOString(),
+    });
+  };
+
   // Email/password login with special-case support for admin@gmail.com/admin
   const loginWithEmailPassword = async (email, password) => {
     const e = (email || '').toLowerCase().trim();
@@ -80,7 +102,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loading = authLoading || adminLoading;
-  const value = { user, isAdmin, loading, loginWithGoogle, loginWithEmailPassword, logout };
+  const value = { user, isAdmin, loading, loginWithGoogle, loginWithEmailPassword, registerWithEmail, logout };
   return (
     <AuthContext.Provider value={value}>
       {children}
