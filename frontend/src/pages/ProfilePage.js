@@ -22,7 +22,7 @@ const ProfilePage = () => {
         await updateProfile(auth.currentUser, { displayName: displayName || null, photoURL: photoUrl || null });
       }
 
-      // Update email if changed
+      
       if (email !== user.email) {
         await updateEmail(auth.currentUser, email);
       }
