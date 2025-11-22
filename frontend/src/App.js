@@ -11,6 +11,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import PaymentPage from './pages/PaymentPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import ProfilePage from './pages/ProfilePage';
 import ParkingAreasPage from './pages/ParkingAreasPage';
 import ParkingAreaDetailsPage from './pages/ParkingAreaDetailsPage';
 import AdminSlotManagementPage from './pages/AdminSlotManagementPage';
@@ -27,7 +28,7 @@ const NavigationHandler = () => {
   React.useEffect(() => {
     // stop the loading indicator when route changes
     setLoading(false);
-    // ensure page is at top after navigation
+   
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [location.pathname, setLoading]);
   return null;
@@ -66,6 +67,11 @@ function App() {
             <Route path="/payment" element={
               <ProtectedRoute disallowAdmin>
                 <PaymentPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute disallowAdmin>
+                <ProfilePage />
               </ProtectedRoute>
             } />
             <Route path="/admin" element={
