@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { FaUser } from "react-icons/fa";
 
 const Header = () => {
   const [open, setOpen] = useState(false);
@@ -63,16 +64,19 @@ const Header = () => {
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setProfileDropdown(!profileDropdown)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex flex-col items-end">
-                    <span className="text-sm font-medium text-gray-900">
-                      {user.displayName || user.email?.split('@')[0] || 'User'}
-                    </span>
-                  </div>
+                  {/* Profile Icon */}
                   <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
                     {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
                   </div>
+
+                  {/* Username */}
+                  <span className="text-sm font-medium text-gray-900">
+                    {user.displayName || user.email?.split('@')[0] || 'User'}
+                  </span>
+
+                  {/* Dropdown Arrow */}
                   <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
@@ -88,8 +92,9 @@ const Header = () => {
                     <Link
                       to="/profile"
                       onClick={() => setProfileDropdown(false)}
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
+                      <FaUser className="text-gray-500" size={14} />
                       Profile
                     </Link>
                     <button
@@ -132,12 +137,21 @@ const Header = () => {
                 </>
               ) : (
                 <div className="space-y-1">
-                  <div className="px-3 py-2 text-sm font-medium text-gray-900">
-                    {user.displayName || user.email?.split('@')[0] || 'User'}
+                  <div className="flex items-center gap-2 px-3 py-2 border rounded-md">
+                    <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
+                      {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">
+                      {user.displayName || user.email?.split('@')[0] || 'User'}
+                    </span>
                   </div>
 
                   <div className="flex gap-2">
-                    <Link to="/profile" onClick={() => setOpen(false)} className="flex-1 mt-1 px-3 py-2 text-sm font-medium border rounded-md text-center">Profile</Link>
+                    <Link to="/profile" onClick={() => setOpen(false)}
+                      className="inline-flex mt-1 px-3 py-2 text-sm font-medium border rounded-md text-center"
+                    >
+                      <FaUser size={14} /> Profile
+                    </Link>
                     <button
                       onClick={() => { logout(); setOpen(false); }}
                       className="flex-1 mt-1 px-3 py-2 text-sm font-medium border rounded-md"
