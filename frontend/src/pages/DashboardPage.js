@@ -120,10 +120,10 @@ function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
+        <div className="text-center page-fade-in">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading parking areas...</p>
+          <p className="mt-4 text-gray-600 dark:text-slate-300">Loading parking areas...</p>
         </div>
       </div>
     );
@@ -131,13 +131,13 @@ function DashboardPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-4">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+      <div className="max-w-4xl mx-auto p-4 page-fade-in">
+        <div className="bg-red-50 dark:bg-red-950/40 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded relative" role="alert">
           <strong className="font-bold">Error: </strong>
           <span className="block sm:inline">{error}</span>
           <button 
             onClick={fetchParkingAreas}
-            className="ml-4 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded"
+            className="ml-4 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded btn-soft"
           >
             Retry
           </button>
@@ -147,13 +147,13 @@ function DashboardPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-slate-50 dark:bg-slate-950 page-fade-in">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Available Parking Areas</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-50">Available Parking Areas</h1>
         {user?.role === 'admin' && (
           <Link
             to="/admin/parking-areas"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 btn-soft"
           >
             Manage Parking Areas
           </Link>
@@ -161,7 +161,7 @@ function DashboardPage() {
       </div>
 
       {locationError && (
-        <div className="mb-4 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700">
+        <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-950/40 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-200">
           <p>{locationError}</p>
         </div>
       )}
@@ -182,15 +182,15 @@ function DashboardPage() {
               d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h3 className="mt-2 text-lg font-medium text-gray-900">No parking areas available</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-slate-50">No parking areas available</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             There are currently no parking areas listed. Please check back later.
           </p>
           {user?.role === 'admin' && (
             <div className="mt-6">
               <Link
                 to="/admin/parking-areas"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 btn-soft"
               >
                 Add New Parking Area
               </Link>
@@ -210,9 +210,9 @@ function DashboardPage() {
               : null;
 
             return (
-              <div key={area._id} className="bg-white overflow-hidden shadow rounded-lg">
+              <div key={area._id} className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border border-gray-100 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-200 flex flex-col card-elevated">
                 {/* Photo Section */}
-                <div className="h-48 bg-gray-200 relative">
+                <div className="h-48 bg-gray-100 relative overflow-hidden rounded-t-2xl">
                   {area.photo ? (
                     <img 
                       src={area.photo} 
@@ -268,11 +268,11 @@ function DashboardPage() {
                     </div>
                     <div className="ml-5 w-0 flex-1">
                       <dl>
-                        <dt className="text-sm font-medium text-gray-500 truncate">
+                        <dt className="text-sm font-medium text-gray-500 dark:text-slate-400 truncate">
                           {area.name}
                         </dt>
                         <dd className="flex items-baseline">
-                          <div className="text-2xl font-semibold text-gray-900">
+                          <div className="text-2xl font-semibold text-gray-900 dark:text-slate-50">
                             {area.availableSlots || 0} / {area.slotAmount || 0} slots available
                           </div>
                         </dd>
@@ -280,20 +280,20 @@ function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                <div className="bg-gray-50 px-5 py-3">
+                <div className="bg-gray-50 dark:bg-slate-900/80 px-5 py-3 border-t border-gray-100 dark:border-slate-800 mt-auto">
                   <div className="text-sm">
-                    <div className="font-medium text-gray-700">
+                    <div className="font-medium text-gray-700 dark:text-slate-200">
                       {area.address}
                     </div>
                     {distance !== null && (
-                      <div className="mt-1 text-sm text-gray-500">
+                      <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">
                         {distance} km away
                       </div>
                     )}
                     <div className="mt-2">
                       <Link
                         to={`/parking/${area._id}`}
-                        className="text-blue-600 hover:text-blue-900 font-medium"
+                        className="inline-flex items-center gap-1 text-primary hover:text-primary-dark font-medium text-sm"
                       >
                         View details →
                       </Link>
