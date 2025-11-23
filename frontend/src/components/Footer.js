@@ -12,7 +12,7 @@ const Footer = () => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
   return (
-    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white mt-auto">
+    <footer className="bg-gradient-to-br from-slate-900 via-slate-950 to-slate-900 text-white mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="py-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1">
