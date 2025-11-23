@@ -153,7 +153,7 @@ export async function markPaid(req, res) {
       `Parking Payment Receipt - ${v.plate}`,
       `<h3>Payment Successful</h3>
        <p>Vehicle: <b>${v.plate}</b></p>
-       <p>Amount: <b>₹ ${amount}</b></p>
+       <p>Amount: <b>RS ${amount}</b></p>
        <p>Method: <b>${method}</b></p>
        <p>Receipt: <b>${receiptId}</b></p>`
     );
