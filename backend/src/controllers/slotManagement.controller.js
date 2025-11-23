@@ -22,11 +22,62 @@ export async function getAvailableSlots(req, res) {
     const { parkingAreaId } = req.params;
     
     const parkingArea = await ParkingArea.findById(parkingAreaId)
-      .select('name totalSlots availableSlots slots');
+      .select('name totalSlots availableSlots occupiedSlots slots');
     
     if (!parkingArea) {
       return res.status(404).json({ error: 'Parking area not found' });
     }
+
+    // Auto-initialize slots if they haven't been set up yet
+    if (!parkingArea.slots || parkingArea.slots.length === 0) {
+      const slots = [];
+      for (let i = 1; i <= parkingArea.totalSlots; i++) {
+        slots.push({
+          slotNumber: i,
+          isOccupied: false,
+          vehicleId: null,
+          occupiedAt: null
+        });
+      }
+
+      parkingArea.slots = slots;
+      parkingArea.availableSlots = parkingArea.totalSlots;
+      parkingArea.occupiedSlots = 0;
+      await parkingArea.save();
+    }
+
+    // Re-sync slot occupancy with actual active vehicles to avoid any
+    // stale state. This ensures that the available slots list always
+    // reflects the true situation in the Vehicles collection.
+    const activeVehicles = await Vehicle.find({
+      parkingAreaId: parkingArea._id,
+      status: { $in: ['Parked', 'Paid'] }
+    }).select('slotNumber');
+
+    const occupiedSlotNumbers = new Set(
+      activeVehicles
+        .filter(v => v.slotNumber != null)
+        .map(v => v.slotNumber)
+    );
+
+    let occupiedCount = 0;
+    for (const slot of parkingArea.slots) {
+      const isOccupied = occupiedSlotNumbers.has(slot.slotNumber);
+      slot.isOccupied = isOccupied;
+      if (!isOccupied) {
+        slot.vehicleId = null;
+        slot.occupiedAt = null;
+      }
+      if (isOccupied) occupiedCount += 1;
+    }
+
+    parkingArea.occupiedSlots = occupiedCount;
+    parkingArea.availableSlots = Math.max(
+      0,
+      parkingArea.totalSlots - occupiedCount
+    );
+
+    await parkingArea.save();
 
     const availableSlots = parkingArea.slots
       .filter(slot => !slot.isOccupied)
@@ -188,9 +239,15 @@ export async function exitUserAndFreeSlot(req, res) {
     vehicle.exitTime = exitTime || new Date();
     await vehicle.save();
 
-    // Update parking area slot
-    const slot = parkingArea.slots.find(s => s.slotNumber === vehicle.slotNumber);
-    
+    // Update parking area slot - try by slotNumber first, then by vehicleId as fallback
+    let slot = null;
+    if (vehicle.slotNumber != null) {
+      slot = parkingArea.slots.find(s => s.slotNumber === vehicle.slotNumber);
+    }
+    if (!slot) {
+      slot = parkingArea.slots.find(s => String(s.vehicleId) === String(vehicle._id));
+    }
+
     if (slot) {
       slot.isOccupied = false;
       slot.vehicleId = null;

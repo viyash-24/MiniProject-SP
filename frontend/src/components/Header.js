@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { FaUser } from "react-icons/fa";
 
 const Header = () => {
   const [open, setOpen] = useState(false);
@@ -26,12 +27,15 @@ const Header = () => {
     };
   }, [profileDropdown]);
 
-  const navLinkClass = ({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium ${isActive ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary hover:bg-gray-100'}`;
-  
-  // Updated to highlight Admin for any /admin/* route
+  const navLinkClass = ({ isActive }) => `px-3 py-2 rounded-md text-sm font-medium ${
+    isActive ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary hover:bg-gray-100'
+  }`;
+
   const adminNavLinkClass = ({ isActive }) => {
     const isAdminRoute = location.pathname.startsWith('/admin');
-    return `px-3 py-2 rounded-md text-sm font-medium ${isAdminRoute ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary hover:bg-gray-100'}`;
+    return `px-3 py-2 rounded-md text-sm font-medium ${
+      isAdminRoute ? 'bg-primary text-white' : 'text-gray-700 hover:text-primary hover:bg-gray-100'
+    }`;
   };
 
   return (
@@ -42,12 +46,14 @@ const Header = () => {
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold">SP</span>
             <span className="text-lg font-semibold text-gray-800">Smart Parking</span>
           </Link>
+
           <div className="hidden md:flex items-center gap-1">
             {!isAdmin && <NavLink to="/" className={navLinkClass}>Home</NavLink>}
             {!isAdmin && <NavLink to="/dashboard" className={navLinkClass}>Parking</NavLink>}
             {user && !isAdmin && <NavLink to="/payment" className={navLinkClass}>Payment</NavLink>}
             {isAdmin && <NavLink to="/admin" className={adminNavLinkClass}>Admin</NavLink>}
           </div>
+
           <div className="hidden md:flex items-center gap-2">
             {!user ? (
               <>
@@ -56,38 +62,43 @@ const Header = () => {
               </>
             ) : (
               <div className="relative" ref={dropdownRef}>
-                <button 
+                <button
                   onClick={() => setProfileDropdown(!profileDropdown)}
-                  className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex flex-col items-end">
-                    <span className="text-sm font-medium text-gray-900">
-                      {user.displayName || user.email?.split('@')[0] || 'User'}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      {user.email}
-                    </span>
-                  </div>
+                  {/* Profile Icon */}
                   <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
                     {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
                   </div>
+
+                  {/* Username */}
+                  <span className="text-sm font-medium text-gray-900">
+                    {user.displayName || user.email?.split('@')[0] || 'User'}
+                  </span>
+
+                  {/* Dropdown Arrow */}
                   <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
-                
+
                 {profileDropdown && (
                   <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-50">
                     <div className="px-4 py-3 border-b border-gray-200">
                       <div className="text-sm font-medium text-gray-900">
                         {user.displayName || user.email?.split('@')[0] || 'User'}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        {user.email}
-                      </div>
                     </div>
-                    <button 
-                      onClick={() => { logout(); setProfileDropdown(false); }} 
+                    <Link
+                      to="/profile"
+                      onClick={() => setProfileDropdown(false)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    >
+                      <FaUser className="text-gray-500" size={14} />
+                      Profile
+                    </Link>
+                    <button
+                      onClick={() => { logout(); setProfileDropdown(false); }}
                       className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                     >
                       Sign out
@@ -97,11 +108,19 @@ const Header = () => {
               </div>
             )}
           </div>
-          <button onClick={() => setOpen(!open)} className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 focus:outline-none" aria-label="Toggle menu">
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+
+          <button
+            onClick={() => setOpen(!open)}
+            className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 focus:outline-none"
+            aria-label="Toggle menu"
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
           </button>
         </div>
       </div>
+
       {open && (
         <div className="md:hidden border-t border-gray-200">
           <div className="space-y-1 px-4 py-3">
@@ -109,6 +128,7 @@ const Header = () => {
             {!isAdmin && <NavLink to="/dashboard" className={navLinkClass} onClick={() => setOpen(false)}>Parking</NavLink>}
             {user && !isAdmin && <NavLink to="/payment" className={navLinkClass} onClick={() => setOpen(false)}>Payment</NavLink>}
             {isAdmin && <NavLink to="/admin" className={adminNavLinkClass} onClick={() => setOpen(false)}>Admin</NavLink>}
+
             <div className="pt-2">
               {!user ? (
                 <>
@@ -117,18 +137,28 @@ const Header = () => {
                 </>
               ) : (
                 <div className="space-y-1">
-                  <div className="px-3 py-2 text-sm font-medium text-gray-900">
-                    {user.displayName || user.email?.split('@')[0] || 'User'}
+                  <div className="flex items-center gap-2 px-3 py-2 border rounded-md">
+                    <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
+                      {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-sm font-medium text-gray-900">
+                      {user.displayName || user.email?.split('@')[0] || 'User'}
+                    </span>
                   </div>
-                  <div className="px-3 py-2 text-xs text-gray-500">
-                    {user.email}
+
+                  <div className="flex gap-2">
+                    <Link to="/profile" onClick={() => setOpen(false)}
+                      className="inline-flex mt-1 px-3 py-2 text-sm font-medium border rounded-md text-center"
+                    >
+                      <FaUser size={14} /> Profile
+                    </Link>
+                    <button
+                      onClick={() => { logout(); setOpen(false); }}
+                      className="flex-1 mt-1 px-3 py-2 text-sm font-medium border rounded-md"
+                    >
+                      Sign out
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => { logout(); setOpen(false); }} 
-                    className="w-full mt-1 px-3 py-2 text-sm font-medium border rounded-md"
-                  >
-                    Sign out
-                  </button>
                 </div>
               )}
             </div>
