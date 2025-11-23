@@ -27,20 +27,20 @@ const ContactUsPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-16">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-16 page-fade-in">
       <div className="max-w-7xl mx-auto px-6">
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-extrabold text-gray-900 mb-4">Get in Touch</h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <h1 className="text-5xl font-extrabold text-gray-900 dark:text-slate-50 mb-4">Get in Touch</h1>
+          <p className="text-lg text-gray-600 dark:text-slate-300 max-w-2xl mx-auto">
             Have questions or need assistance? Fill out the form below or contact us directly.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-10">
           {/* Form */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-lg p-10">
-            <h2 className="text-3xl font-bold text-gray-900 mb-6">Send us a message</h2>
+          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-800 p-10 card-elevated">
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-slate-50 mb-6">Send us a message</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               {[
                 { label: 'Full Name', name: 'name', type: 'text', placeholder: 'John Doe', required: true },
@@ -49,7 +49,7 @@ const ContactUsPage = () => {
                 { label: 'Subject', name: 'subject', type: 'text', placeholder: 'How can we help?', required: true }
               ].map((field) => (
                 <div key={field.name}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">{field.label}</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">{field.label}</label>
                   <input
                     type={field.type}
                     name={field.name}
@@ -57,13 +57,13 @@ const ContactUsPage = () => {
                     onChange={handleChange}
                     placeholder={field.placeholder}
                     required={field.required}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                   />
                 </div>
               ))}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Message</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">Message</label>
                 <textarea
                   name="message"
                   value={formData.message}
@@ -78,7 +78,7 @@ const ContactUsPage = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50"
+                className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 rounded-xl transition disabled:opacity-50 btn-soft"
               >
                 {isSubmitting ? 'Sending...' : 'Send Message'}
               </button>
@@ -87,7 +87,7 @@ const ContactUsPage = () => {
 
           
           <div className="space-y-6">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg p-8">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl shadow-lg p-8 card-elevated">
               <h2 className="text-2xl font-bold mb-4">Contact Information</h2>
               <p className="mb-2"><span className="font-semibold">Address:</span> 123 Parking St, City Center</p>
               <p className="mb-2"><span className="font-semibold">Email:</span> support@smartparking.com</p>
@@ -95,7 +95,7 @@ const ContactUsPage = () => {
               <p className="mb-2"><span className="font-semibold">Business Hours:</span> Mon-Fri: 9AM - 6PM</p>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-lg p-8 text-gray-900">
+            <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-lg border border-gray-100 dark:border-slate-800 p-8 text-gray-900 dark:text-slate-50 card-elevated">
               <h3 className="text-xl font-bold mb-4">Need Immediate Help?</h3>
               <p className="mb-4">For urgent parking issues or technical support, call our 24/7 hotline:</p>
               <p className="text-2xl font-bold text-blue-600">+1 (555) 999-0000</p>
