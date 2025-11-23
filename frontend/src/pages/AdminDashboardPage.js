@@ -7,10 +7,10 @@ import SelectSlotPopup from "../components/SelectSlotPopup";
 const TabButton = ({ active, onClick, children }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+    className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
       active
-        ? "border-primary text-primary"
-        : "border-transparent text-gray-600 hover:text-gray-900"
+        ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light"
+        : "text-gray-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary-light"
     }`}
   >
     {children}
@@ -19,6 +19,13 @@ const TabButton = ({ active, onClick, children }) => (
 
 const AdminDashboardPage = () => {
   const { user } = useAuth();
+  
+  // Add page fade-in animation
+  useEffect(() => {
+    document.body.classList.add('page-fade-in');
+    return () => document.body.classList.remove('page-fade-in');
+  }, []);
+
   const [tab, setTab] = useState("vehicles");
   const [showAddForm, setShowAddForm] = useState(false);
   const [q, setQ] = useState("");
@@ -45,6 +52,7 @@ const AdminDashboardPage = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [showSlotPopup, setShowSlotPopup] = useState(false);
   const [selectedSlotNumber, setSelectedSlotNumber] = useState(null);
+  
   const vehicleTypes = [
     "Car",
     "Bike",
@@ -476,845 +484,702 @@ const AdminDashboardPage = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">
-            Manage users, vehicles, slots, and payments.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className="px-4 py-2 rounded-md bg-primary text-white"
-            onClick={() => setShowAddForm(true)}
-          >
-            Add User & Vehicle
-          </button>
-          <Link
-            to="/admin/parking-areas"
-            state={{ openForm: true }}
-            className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 text-center"
-          >
-            Manage Parking Areas
-          </Link>
-        </div>
-      </div>
-
-      <div className="mt-6 bg-white border rounded-2xl shadow-sm">
-        <div className="flex space-x-4 border-b mb-6 overflow-x-auto">
-          {tabs.map(({ id, name }) => (
-            <TabButton
-              key={id}
-              active={tab === id}
-              onClick={() => {
-                setTab(id);
-                setShowAddForm(false);
-              }}
-            >
-              {name}
-              {id === "vehicles" && `(${vehicles.length})`}
-              {id === "users" && `(${usersList.length})`}
-              {id === "slots" && `(${slots.length})`}
-              {id === "payments" && `(${payments.length})`}
-              {id === "parking-areas" && `(${parkingAreas.length})`}
-              {id === "parking-charges" && `(${parkingCharges.length})`}
-            </TabButton>
-          ))}
-        </div>
-
-        {showAddForm && (
-          <div className="p-4">
-            <form
-              onSubmit={createUserAndVehicle}
-              className="grid sm:grid-cols-1 md:grid-cols-2 gap-6"
-            >
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">User Details</h3>
-                <input
-                  placeholder="Name"
-                  value={newUser.name}
-                  onChange={(e) =>
-                    setNewUser((u) => ({ ...u, name: e.target.value }))
-                  }
-                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                />
-                <input
-                  placeholder="Email"
-                  required
-                  value={newUser.email}
-                  onChange={(e) =>
-                    setNewUser((u) => ({ ...u, email: e.target.value }))
-                  }
-                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                />
-                <input
-                  placeholder="Phone"
-                  value={newUser.phone}
-                  onChange={(e) =>
-                    setNewUser((u) => ({ ...u, phone: e.target.value }))
-                  }
-                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                />
-              </div>
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Vehicle Details</h3>
-                <input
-                  placeholder="Plate (e.g. TN-09-AB-1234)"
-                  required
-                  value={newVehicle.plate}
-                  onChange={(e) =>
-                    setNewVehicle((v) => ({ ...v, plate: e.target.value }))
-                  }
-                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                />
-
-                <select
-                  value={newVehicle.vehicleType}
-                  onChange={(e) =>
-                    setNewVehicle((v) => ({
-                      ...v,
-                      vehicleType: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                >
-                  {vehicleTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={selectedParkingArea}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSelectedParkingArea(value);
-                    setSelectedSlotNumber(null);
-                    setAvailableSlots([]);
-                    setNewVehicle((v) => ({ ...v, slotName: "" }));
-                  }}
-                  className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                >
-                  <option value="">Select Parking Area (Optional)</option>
-                  {parkingAreas
-                    .filter((area) => area.active)
-                    .map((area) => (
-                      <option key={area._id} value={area._id}>
-                        {area.name} ({area.availableSlots || 0}/
-                        {area.totalSlots || area.slotAmount} slots available)
-                      </option>
-                    ))}
-                </select>
-                <div className="flex gap-2">
-                  <input
-                    placeholder="Slot (optional)"
-                    value={newVehicle.slotName}
-                    readOnly
-                    className="flex-1 rounded-md border-gray-300 focus:border-primary focus:ring-primary bg-gray-50"
-                  />
-                  <button
-                    type="button"
-                    disabled={!selectedParkingArea}
-                    onClick={async () => {
-                      if (!selectedParkingArea) {
-                        toast.error("Please select a parking area first");
-                        return;
-                      }
-                      await fetchAvailableSlotsForArea(selectedParkingArea);
-                      setShowSlotPopup(true);
-                    }}
-                    className="px-3 py-2 rounded-md bg-primary text-white disabled:bg-gray-400"
-                  >
-                    Select Slot
-                  </button>
-                </div>
-                <button className="w-full px-4 py-2 rounded-md bg-gray-900 text-white">
-                  Add User & Vehicle
-                </button>
-              </div>
-            </form>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-200">
+      {/* Header */}
+      <header className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm sticky top-0 z-10 border-b border-gray-100 dark:border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+            Admin Dashboard
+          </h1>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-gray-600 dark:text-slate-300">
+              Welcome, <span className="font-medium text-primary dark:text-primary-light">{user?.displayName || 'Admin'}</span>
+            </span>
           </div>
-        )}
+        </div>
+      </header>
 
-        {tab === "vehicles" && (
-          <div className="p-4">
-            <div className="flex items-center justify-between gap-3">
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Search vehicles, users, status..."
-                className="w-72 rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-              />
-              <div className="text-sm text-gray-600">
-                Total: {filteredVehicles.length}
-              </div>
-            </div>
-
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-600 border-b">
-                    <th className="py-3 pr-4">Plate</th>
-                    <th className="py-3 pr-4">User</th>
-                    <th className="py-3 pr-4">Phone</th>
-                    <th className="py-3 pr-4 text-center">Parking Area</th>
-                    <th className="py-3 pr-4 text-center">Status</th>
-                    <th className="py-3 pr-4 text-center">Payment</th>
-                    <th className="py-3 pr-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredVehicles.map((v) => (
-                    <tr key={v._id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 pr-4 whitespace-nowrap">{v.plate}</td>
-                      <td className="py-3 pr-4">
-                        {v.userName || v.userEmail || "-"}
-                      </td>
-                      <td className="py-3 pr-4">{v.userPhone || "-"}</td>
-                      <td className="py-3 pr-4 text-center">
-                        {v.parkingAreaId
-                          ? parkingAreas.find(
-                              (area) => area._id === v.parkingAreaId
-                            )?.name || "Unknown Area"
-                          : v.slotName || "-"}
-                      </td>
-                      <td className="py-3 pr-4 text-center">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            v.status === "Parked"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : v.status === "Paid"
-                              ? "bg-green-100 text-green-700"
-                              : v.status === "Exited"
-                              ? "bg-gray-100 text-gray-700"
-                              : "bg-blue-100 text-blue-700"
-                          }`}
-                        >
-                          {v.status || "-"}
-                        </span>
-                      </td>
-                      <td className="py-3 pr-4 text-center">
-                        {v.paymentStatus || "Unpaid"}
-                      </td>
-                      <td className="py-3 pr-4 text-right">
-                        <div className="inline-flex gap-2">
-                          {v.paymentStatus !== "Paid" && (
-                            <button
-                              className="px-2 py-1 rounded-md border text-xs"
-                              onClick={() => markPaid(v)}
-                            >
-                              Mark as Paid
-                            </button>
-                          )}
-                          {v.status !== "Exited" && (
-                            <button
-                              className="px-2 py-1 rounded-md bg-gray-900 text-white text-xs"
-                              onClick={() => exitVehicle(v)}
-                              disabled={v.paymentStatus !== "Paid"}
-                            >
-                              Exit
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {tab === "users" && (
-          <div className="p-4">
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-600 border-b">
-                    <th className="py-3 pr-4">Name</th>
-                    <th className="py-3 pr-4">Email</th>
-                    <th className="py-3 pr-4">Phone</th>
-                    <th className="py-3 pr-4">Role</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usersList.map((u) => (
-                    <tr key={u._id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 pr-4 whitespace-nowrap">
-                        {u.name || "-"}
-                      </td>
-                      <td className="py-3 pr-4">{u.email}</td>
-                      <td className="py-3 pr-4">{u.phone || "-"}</td>
-                      <td className="py-3 pr-4">{u.role || "user"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {tab === "slots" && (
-          <div className="p-4">
-            <form
-              onSubmit={createSlot}
-              className="mb-6 p-4 border rounded-lg flex items-end gap-3"
-            >
-              <div className="flex-grow">
-                <label className="block text-sm font-medium text-gray-700">
-                  Area Name
-                </label>
-                <input
-                  placeholder="e.g. Basement A"
-                  value={newSlot.name}
-                  onChange={(e) =>
-                    setNewSlot((s) => ({ ...s, name: e.target.value }))
-                  }
-                  className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                  required
-                />
-              </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow card-elevated">
+            <div className="flex items-center justify-between">
               <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Total Spots
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={newSlot.total}
-                  onChange={(e) =>
-                    setNewSlot((s) => ({ ...s, total: Number(e.target.value) }))
-                  }
-                  className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                  required
-                />
+                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Total Users</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{usersList.length}</p>
               </div>
-              <button className="px-4 py-2 rounded-md bg-gray-900 text-white h-10">
-                Create Slot
-              </button>
-            </form>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {slots.map((s) => (
-                <div
-                  key={s._id}
-                  className="p-5 border rounded-xl bg-white shadow-sm"
-                >
-                  <div className="text-sm text-gray-500">
-                    {s.area || s.name || "Area"}
-                  </div>
-                  <div className="mt-2 text-2xl font-bold text-gray-900">
-                    {s.free ?? 0} / {s.total ?? 0} free
-                  </div>
-                  <div className="mt-3 h-2 bg-gray-100 rounded">
-                    <div
-                      className="h-2 bg-green-500 rounded"
-                      style={{
-                        width: `${
-                          Math.max(
-                            0,
-                            Math.min(1, (s.free || 0) / (s.total || 1))
-                          ) * 100
-                        }%`,
-                      }}
-                    />
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      defaultValue={s.total ?? 0}
-                      onBlur={(e) =>
-                        updateSlot(s, {
-                          total: Number(e.target.value),
-                          free: s.free ?? 0,
-                        })
-                      }
-                      className="rounded-md border-gray-300 text-sm"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      defaultValue={s.free ?? 0}
-                      onBlur={(e) =>
-                        updateSlot(s, {
-                          total: s.total ?? 0,
-                          free: Number(e.target.value),
-                        })
-                      }
-                      className="rounded-md border-gray-300 text-sm"
-                    />
-                  </div>
-                </div>
-              ))}
+              <div className="p-3 rounded-full bg-blue-50 dark:bg-blue-900/30">
+                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
             </div>
           </div>
-        )}
-
-        {tab === "payments" && (
-          <div className="p-4">
-            <div className="mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Payment History
-              </h2>
-              <p className="text-sm text-gray-600 mt-1">
-                Complete payment records from all transactions (View Only)
-              </p>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-left text-gray-600 border-b bg-gray-50">
-                    <th className="py-3 px-4 font-medium">
-                      Vehicle Number Plate
-                    </th>
-                    <th className="py-3 px-4 font-medium">Vehicle Type</th>
-                    <th className="py-3 px-4 font-medium">User Name</th>
-                    <th className="py-3 px-4 font-medium">User Email</th>
-                    <th className="py-3 px-4 font-medium">Payment Amount</th>
-                    <th className="py-3 px-4 font-medium">
-                      Payment Date & Time
-                    </th>
-                    <th className="py-3 px-4 font-medium">Payment Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {payments.map((p) => (
-                    <tr key={p._id} className="border-b hover:bg-gray-50">
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-gray-900">
-                          {p.vehiclePlate || "-"}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
-                          {p.vehicleType || "-"}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-gray-900">
-                          {p.userName || "N/A"}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-sm text-gray-600">
-                          {p.userEmail || "-"}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="font-semibold text-green-600">
-                          ₹{p.amount || 0}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="text-sm text-gray-900">
-                          {p.paymentDate
-                            ? new Date(p.paymentDate).toLocaleDateString()
-                            : p.createdAt
-                            ? new Date(p.createdAt).toLocaleDateString()
-                            : "-"}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {p.paymentDate
-                            ? new Date(p.paymentDate).toLocaleTimeString()
-                            : p.createdAt
-                            ? new Date(p.createdAt).toLocaleTimeString()
-                            : "-"}
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            p.status === "Success" || p.status === "Paid"
-                              ? "bg-green-100 text-green-700"
-                              : p.status === "Failed"
-                              ? "bg-red-100 text-red-700"
-                              : p.status === "Pending"
-                              ? "bg-yellow-100 text-yellow-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}
-                        >
-                          {p.status || "Pending"}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {payments.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
-                  <svg
-                    className="h-6 w-6 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-sm font-medium text-gray-900 mb-2">
-                  No payment records yet
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Payment records will appear here once users make payments.
+          
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow card-elevated">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Active Vehicles</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                  {vehicles.filter(v => v.status === 'active').length}
                 </p>
               </div>
-            )}
-          </div>
-        )}
-
-        {tab === "parking-areas" && (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="p-4 border-b">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <h2 className="text-lg font-semibold">Parking Areas</h2>
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder="Search parking areas..."
-                    className="pl-10 pr-4 py-2 border rounded-lg w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                  />
-                  <svg
-                    className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                    />
-                  </svg>
-                </div>
+              <div className="p-3 rounded-full bg-green-50 dark:bg-green-900/30">
+                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                </svg>
               </div>
             </div>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Name
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Address
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Slots
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Created
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredParkingAreas.length > 0 ? (
-                    filteredParkingAreas.map((area) => (
-                      <tr key={area._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center">
-                            {area.photo && (
-                              <div className="flex-shrink-0 h-10 w-10 mr-3">
-                                <img
-                                  className="h-10 w-10 rounded-full object-cover"
-                                  src={area.photo}
-                                  alt={area.name}
-                                />
-                              </div>
-                            )}
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {area.name}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {area.address}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            <span className="font-medium">
-                              {area.availableSlots || 0}
-                            </span>
-                            <span className="text-gray-500">
-                              {" "}
-                              / {area.totalSlots || area.slotAmount}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              area.active
-                                ? "bg-green-100 text-green-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {area.active ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(area.createdAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan="5"
-                        className="px-6 py-4 text-center text-sm text-gray-500"
-                      >
-                        No parking areas found
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+          </div>
+          
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow card-elevated">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Available Slots</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                  {slots.filter(s => s.status === 'available').length}
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-purple-50 dark:bg-purple-900/30">
+                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
             </div>
           </div>
-        )}
+          
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow card-elevated">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Total Revenue</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+                  ${payments.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(2)}
+                </p>
+              </div>
+              <div className="p-3 rounded-full bg-yellow-50 dark:bg-yellow-900/30">
+                <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
 
-        {tab === "parking-charges" && (
-          <div className="p-4">
-            <div className="mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                Manage Parking Charges
-              </h2>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Management Console</h1>
+            <p className="text-gray-600 dark:text-slate-400">
+              Manage users, vehicles, slots, and payments.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="px-4 py-2.5 rounded-lg bg-primary hover:bg-primary-dark text-white shadow-md shadow-primary/20 transition-colors btn-soft"
+              onClick={() => setShowAddForm(true)}
+            >
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add User & Vehicle
+              </span>
+            </button>
+            <Link
+              to="/admin/parking-areas"
+              state={{ openForm: true }}
+              className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 text-center transition-colors"
+            >
+              Manage Parking Areas
+            </Link>
+          </div>
+        </div>
 
-              {/* Add/Edit Form */}
-              <form
-                onSubmit={createOrUpdateParkingCharge}
-                className="bg-gray-50 p-4 rounded-lg border mb-6"
+        <div className="mt-6 bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 rounded-2xl shadow-sm">
+          <div className="flex space-x-4 border-b mb-6 overflow-x-auto">
+            {tabs.map(({ id, name }) => (
+              <TabButton
+                key={id}
+                active={tab === id}
+                onClick={() => {
+                  setTab(id);
+                  setShowAddForm(false);
+                }}
               >
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Vehicle Type
-                    </label>
-                    <select
-                      value={newCharge.vehicleType}
-                      onChange={(e) =>
-                        setNewCharge((c) => ({
-                          ...c,
-                          vehicleType: e.target.value,
-                        }))
-                      }
-                      className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                      required
-                      disabled={editingCharge}
-                    >
-                      <option value="">Select Type</option>
-                      {vehicleTypes.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                {name}
+                {id === "vehicles" && `(${vehicles.length})`}
+                {id === "users" && `(${usersList.length})`}
+                {id === "slots" && `(${slots.length})`}
+                {id === "payments" && `(${payments.length})`}
+                {id === "parking-areas" && `(${parkingAreas.length})`}
+                {id === "parking-charges" && `(${parkingCharges.length})`}
+              </TabButton>
+            ))}
+          </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Amount (₹)
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={newCharge.amount}
-                      onChange={(e) =>
-                        setNewCharge((c) => ({
-                          ...c,
-                          amount: parseFloat(e.target.value),
-                        }))
-                      }
-                      className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Duration
-                    </label>
-                    <select
-                      value={newCharge.duration}
-                      onChange={(e) =>
-                        setNewCharge((c) => ({
-                          ...c,
-                          duration: e.target.value,
-                        }))
-                      }
-                      className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                    >
-                      <option value="per hour">Per Hour</option>
-                      <option value="per day">Per Day</option>
-                      <option value="flat rate">Flat Rate</option>
-                    </select>
-                  </div>
-
-                  <div className="flex items-end gap-2">
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
-                    >
-                      {editingCharge ? "Update" : "Add"} Charge
-                    </button>
-                    {editingCharge && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setEditingCharge(null);
-                          setNewCharge({
-                            vehicleType: "",
-                            amount: 0,
-                            duration: "per hour",
-                          });
-                        }}
-                        className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-sm font-medium text-gray-700">
-                    Description (Optional)
-                  </label>
+          {showAddForm && (
+            <div className="p-4">
+              <form
+                onSubmit={createUserAndVehicle}
+                className="grid sm:grid-cols-1 md:grid-cols-2 gap-6"
+              >
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">User Details</h3>
                   <input
-                    type="text"
-                    value={newCharge.description || ""}
+                    placeholder="Name"
+                    value={newUser.name}
                     onChange={(e) =>
-                      setNewCharge((c) => ({
-                        ...c,
-                        description: e.target.value,
-                      }))
+                      setNewUser((u) => ({ ...u, name: e.target.value }))
                     }
-                    placeholder="e.g., Standard parking rate for cars"
-                    className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                  />
+                  <input
+                    placeholder="Email"
+                    required
+                    value={newUser.email}
+                    onChange={(e) =>
+                      setNewUser((u) => ({ ...u, email: e.target.value }))
+                    }
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                  />
+                  <input
+                    placeholder="Phone"
+                    value={newUser.phone}
+                    onChange={(e) =>
+                      setNewUser((u) => ({ ...u, phone: e.target.value }))
+                    }
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                   />
                 </div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium">Vehicle Details</h3>
+                  <input
+                    placeholder="Plate (e.g. TN-09-AB-1234)"
+                    required
+                    value={newVehicle.plate}
+                    onChange={(e) =>
+                      setNewVehicle((v) => ({ ...v, plate: e.target.value }))
+                    }
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                  />
+
+                  <select
+                    value={newVehicle.vehicleType}
+                    onChange={(e) =>
+                      setNewVehicle((v) => ({
+                        ...v,
+                        vehicleType: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                  >
+                    {vehicleTypes.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedParkingArea}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedParkingArea(value);
+                      setSelectedSlotNumber(null);
+                      setAvailableSlots([]);
+                      setNewVehicle((v) => ({ ...v, slotName: "" }));
+                    }}
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                  >
+                    <option value="">Select Parking Area (Optional)</option>
+                    {parkingAreas
+                      .filter((area) => area.active)
+                      .map((area) => (
+                        <option key={area._id} value={area._id}>
+                          {area.name} ({area.availableSlots || 0}/
+                          {area.totalSlots || area.slotAmount} slots available)
+                        </option>
+                      ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <input
+                      placeholder="Slot (optional)"
+                      value={newVehicle.slotName}
+                      readOnly
+                      className="flex-1 rounded-md border-gray-300 focus:border-primary focus:ring-primary bg-gray-50"
+                    />
+                    <button
+                      type="button"
+                      disabled={!selectedParkingArea}
+                      onClick={async () => {
+                        if (!selectedParkingArea) {
+                          toast.error("Please select a parking area first");
+                          return;
+                        }
+                        await fetchAvailableSlotsForArea(selectedParkingArea);
+                        setShowSlotPopup(true);
+                      }}
+                      className="px-3 py-2 rounded-md bg-primary text-white disabled:bg-gray-400"
+                    >
+                      Select Slot
+                    </button>
+                  </div>
+                  <button className="w-full px-4 py-2 rounded-md bg-gray-900 text-white">
+                    Add User & Vehicle
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {tab === "vehicles" && (
+            <div className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Search vehicles, users, status..."
+                  className="w-72 rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                />
+                <div className="text-sm text-gray-600">
+                  Total: {filteredVehicles.length}
+                </div>
+              </div>
+
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-600 border-b">
+                      <th className="py-3 pr-4">Plate</th>
+                      <th className="py-3 pr-4">User</th>
+                      <th className="py-3 pr-4">Phone</th>
+                      <th className="py-3 pr-4 text-center">Parking Area</th>
+                      <th className="py-3 pr-4 text-center">Status</th>
+                      <th className="py-3 pr-4 text-center">Payment</th>
+                      <th className="py-3 pr-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredVehicles.map((v) => (
+                      <tr key={v._id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 pr-4 whitespace-nowrap">{v.plate}</td>
+                        <td className="py-3 pr-4">
+                          {v.userName || v.userEmail || "-"}
+                        </td>
+                        <td className="py-3 pr-4">{v.userPhone || "-"}</td>
+                        <td className="py-3 pr-4 text-center">
+                          {v.parkingAreaId
+                            ? parkingAreas.find(
+                                (area) => area._id === v.parkingAreaId
+                              )?.name || "Unknown Area"
+                            : v.slotName || "-"}
+                        </td>
+                        <td className="py-3 pr-4 text-center">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs ${
+                              v.status === "Parked"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : v.status === "Paid"
+                                ? "bg-green-100 text-green-700"
+                                : v.status === "Exited"
+                                ? "bg-gray-100 text-gray-700"
+                                : "bg-blue-100 text-blue-700"
+                            }`}
+                          >
+                            {v.status || "-"}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-center">
+                          {v.paymentStatus || "Unpaid"}
+                        </td>
+                        <td className="py-3 pr-4 text-right">
+                          <div className="inline-flex gap-2">
+                            {v.paymentStatus !== "Paid" && (
+                              <button
+                                className="px-2 py-1 rounded-md border text-xs"
+                                onClick={() => markPaid(v)}
+                              >
+                                Mark as Paid
+                              </button>
+                            )}
+                            {v.status !== "Exited" && (
+                              <button
+                                className="px-2 py-1 rounded-md bg-gray-900 text-white text-xs"
+                                onClick={() => exitVehicle(v)}
+                                disabled={v.paymentStatus !== "Paid"}
+                              >
+                                Exit
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tab === "users" && (
+            <div className="p-4">
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-gray-600 border-b">
+                      <th className="py-3 pr-4">Name</th>
+                      <th className="py-3 pr-4">Email</th>
+                      <th className="py-3 pr-4">Phone</th>
+                      <th className="py-3 pr-4">Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usersList.map((u) => (
+                      <tr key={u._id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 pr-4 whitespace-nowrap">
+                          {u.name || "-"}
+                        </td>
+                        <td className="py-3 pr-4">{u.email}</td>
+                        <td className="py-3 pr-4">{u.phone || "-"}</td>
+                        <td className="py-3 pr-4">{u.role || "user"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {tab === "slots" && (
+            <div className="p-4">
+              <form
+                onSubmit={createSlot}
+                className="mb-6 p-4 border rounded-lg flex items-end gap-3"
+              >
+                <div className="flex-grow">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Area Name
+                  </label>
+                  <input
+                    placeholder="e.g. Basement A"
+                    value={newSlot.name}
+                    onChange={(e) =>
+                      setNewSlot((s) => ({ ...s, name: e.target.value }))
+                    }
+                    className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Total Spots
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={newSlot.total}
+                    onChange={(e) =>
+                      setNewSlot((s) => ({ ...s, total: Number(e.target.value) }))
+                    }
+                    className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    required
+                  />
+                </div>
+                <button className="px-4 py-2 rounded-md bg-gray-900 text-white h-10">
+                  Create Slot
+                </button>
               </form>
 
-              {/* Parking Charges List */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {slots.map((s) => (
+                  <div
+                    key={s._id}
+                    className="p-5 border rounded-xl bg-white shadow-sm"
+                  >
+                    <div className="text-sm text-gray-500">
+                      {s.area || s.name || "Area"}
+                    </div>
+                    <div className="mt-2 text-2xl font-bold text-gray-900">
+                      {s.free ?? 0} / {s.total ?? 0} free
+                    </div>
+                    <div className="mt-3 h-2 bg-gray-100 rounded">
+                      <div
+                        className="h-2 bg-green-500 rounded"
+                        style={{
+                          width: `${
+                            Math.max(
+                              0,
+                              Math.min(1, (s.free || 0) / (s.total || 1))
+                            ) * 100
+                          }%`,
+                        }}
+                      />
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        defaultValue={s.total ?? 0}
+                        onBlur={(e) =>
+                          updateSlot(s, {
+                            total: Number(e.target.value),
+                            free: s.free ?? 0,
+                          })
+                        }
+                        className="rounded-md border-gray-300 text-sm"
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        defaultValue={s.free ?? 0}
+                        onBlur={(e) =>
+                          updateSlot(s, {
+                            total: s.total ?? 0,
+                            free: Number(e.target.value),
+                          })
+                        }
+                        className="rounded-md border-gray-300 text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {tab === "payments" && (
+            <div className="p-4">
+              <div className="mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Payment History
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Complete payment records from all transactions (View Only)
+                </p>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
                     <tr className="text-left text-gray-600 border-b bg-gray-50">
-                      <th className="py-3 px-4 font-medium">Vehicle Type</th>
-                      <th className="py-3 px-4 font-medium">Amount</th>
-                      <th className="py-3 px-4 font-medium">Duration</th>
-                      <th className="py-3 px-4 font-medium">Description</th>
-                      <th className="py-3 px-4 font-medium">Status</th>
-                      <th className="py-3 px-4 font-medium text-right">
-                        Actions
+                      <th className="py-3 px-4 font-medium">
+                        Vehicle Number Plate
                       </th>
+                      <th className="py-3 px-4 font-medium">Vehicle Type</th>
+                      <th className="py-3 px-4 font-medium">User Name</th>
+                      <th className="py-3 px-4 font-medium">User Email</th>
+                      <th className="py-3 px-4 font-medium">Payment Amount</th>
+                      <th className="py-3 px-4 font-medium">
+                        Payment Date & Time
+                      </th>
+                      <th className="py-3 px-4 font-medium">Payment Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {parkingCharges.length > 0 ? (
-                      parkingCharges.map((charge) => (
-                        <tr
-                          key={charge._id}
-                          className="border-b hover:bg-gray-50"
-                        >
-                          <td className="py-3 px-4">
-                            <span className="font-medium text-gray-900">
-                              {charge.vehicleType}
-                            </span>
+                    {payments.map((p) => (
+                      <tr key={p._id} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-4">
+                          <div className="font-medium text-gray-900">
+                            {p.vehiclePlate || "-"}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                            {p.vehicleType || "-"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-gray-900">
+                            {p.userName || "N/A"}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm text-gray-600">
+                            {p.userEmail || "-"}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-green-600">
+                            ₹{p.amount || 0}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="text-sm text-gray-900">
+                            {p.paymentDate
+                              ? new Date(p.paymentDate).toLocaleDateString()
+                              : p.createdAt
+                              ? new Date(p.createdAt).toLocaleDateString()
+                              : "-"}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {p.paymentDate
+                              ? new Date(p.paymentDate).toLocaleTimeString()
+                              : p.createdAt
+                              ? new Date(p.createdAt).toLocaleTimeString()
+                              : "-"}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              p.status === "Success" || p.status === "Paid"
+                                ? "bg-green-100 text-green-700"
+                                : p.status === "Failed"
+                                ? "bg-red-100 text-red-700"
+                                : p.status === "Pending"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {p.status || "Pending"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {payments.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+                    <svg
+                      className="h-6 w-6 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v2a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-2">
+                    No payment records yet
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Payment records will appear here once users make payments.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "parking-areas" && (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="p-4 border-b">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <h2 className="text-lg font-semibold">Parking Areas</h2>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search parking areas..."
+                      className="pl-10 pr-4 py-2 border rounded-lg w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      value={q}
+                      onChange={(e) => setQ(e.target.value)}
+                    />
+                    <svg
+                      className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Address
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Slots
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredParkingAreas.length > 0 ? (
+                      filteredParkingAreas.map((area) => (
+                        <tr key={area._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center">
+                              {area.photo && (
+                                <div className="flex-shrink-0 h-10 w-10 mr-3">
+                                  <img
+                                    className="h-10 w-10 rounded-full object-cover"
+                                    src={area.photo}
+                                    alt={area.name}
+                                  />
+                                </div>
+                              )}
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {area.name}
+                                </div>
+                              </div>
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="text-lg font-semibold text-green-600">
-                              ₹{charge.amount}
-                            </span>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              {area.address}
+                            </div>
                           </td>
-                          <td className="py-3 px-4">
-                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                              {charge.duration}
-                            </span>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">
+                              <span className="font-medium">
+                                {area.availableSlots || 0}
+                              </span>
+                              <span className="text-gray-500">
+                                {" "}
+                                / {area.totalSlots || area.slotAmount}
+                              </span>
+                            </div>
                           </td>
-                          <td className="py-3 px-4 text-gray-600">
-                            {charge.description || "-"}
-                          </td>
-                          <td className="py-3 px-4">
+                          <td className="px-6 py-4 whitespace-nowrap">
                             <span
-                              className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                charge.isActive
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-gray-100 text-gray-700"
+                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                area.active
+                                  ? "bg-green-100 text-green-800"
+                                  : "bg-gray-100 text-gray-800"
                               }`}
                             >
-                              {charge.isActive ? "Active" : "Inactive"}
+                              {area.active ? "Active" : "Inactive"}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-right">
-                            <div className="inline-flex gap-2">
-                              <button
-                                onClick={() => editParkingCharge(charge)}
-                                className="px-3 py-1 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs"
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => deleteParkingCharge(charge._id)}
-                                className="px-3 py-1 rounded-md bg-red-500 text-white hover:bg-red-600 text-xs"
-                              >
-                                Delete
-                              </button>
-                            </div>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(area.createdAt).toLocaleDateString()}
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
                         <td
-                          colSpan="6"
-                          className="py-8 text-center text-gray-500"
+                          colSpan="5"
+                          className="px-6 py-4 text-center text-sm text-gray-500"
                         >
-                          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
-                            <svg
-                              className="h-6 w-6 text-gray-400"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                              />
-                            </svg>
-                          </div>
-                          <h3 className="text-sm font-medium text-gray-900 mb-2">
-                            No parking charges set
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            Add parking charges for different vehicle types
-                            above.
-                          </p>
+                          No parking areas found
                         </td>
                       </tr>
                     )}
@@ -1322,9 +1187,240 @@ const AdminDashboardPage = () => {
                 </table>
               </div>
             </div>
-          </div>
-        )}
+          )}
+
+          {tab === "parking-charges" && (
+            <div className="p-4">
+              <div className="mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  Manage Parking Charges
+                </h2>
+
+                {/* Add/Edit Form */}
+                <form
+                  onSubmit={createOrUpdateParkingCharge}
+                  className="bg-gray-50 p-4 rounded-lg border mb-6"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Vehicle Type
+                      </label>
+                      <select
+                        value={newCharge.vehicleType}
+                        onChange={(e) =>
+                          setNewCharge((c) => ({
+                            ...c,
+                            vehicleType: e.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                        required
+                        disabled={editingCharge}
+                      >
+                        <option value="">Select Type</option>
+                        {vehicleTypes.map((type) => (
+                          <option key={type} value={type}>
+                            {type}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Amount (₹)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={newCharge.amount}
+                        onChange={(e) =>
+                          setNewCharge((c) => ({
+                            ...c,
+                            amount: parseFloat(e.target.value),
+                          }))
+                        }
+                        className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Duration
+                      </label>
+                      <select
+                        value={newCharge.duration}
+                        onChange={(e) =>
+                          setNewCharge((c) => ({
+                            ...c,
+                            duration: e.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                      >
+                        <option value="per hour">Per Hour</option>
+                        <option value="per day">Per Day</option>
+                        <option value="flat rate">Flat Rate</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-end gap-2">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+                      >
+                        {editingCharge ? "Update" : "Add"} Charge
+                      </button>
+                      {editingCharge && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCharge(null);
+                            setNewCharge({
+                              vehicleType: "",
+                              amount: 0,
+                              duration: "per hour",
+                            });
+                          }}
+                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
+                        >
+                          Cancel
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Description (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={newCharge.description || ""}
+                      onChange={(e) =>
+                        setNewCharge((c) => ({
+                          ...c,
+                          description: e.target.value,
+                        }))
+                      }
+                      placeholder="e.g., Standard parking rate for cars"
+                      className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    />
+                  </div>
+                </form>
+
+                {/* Parking Charges List */}
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-gray-600 border-b bg-gray-50">
+                        <th className="py-3 px-4 font-medium">Vehicle Type</th>
+                        <th className="py-3 px-4 font-medium">Amount</th>
+                        <th className="py-3 px-4 font-medium">Duration</th>
+                        <th className="py-3 px-4 font-medium">Description</th>
+                        <th className="py-3 px-4 font-medium">Status</th>
+                        <th className="py-3 px-4 font-medium text-right">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parkingCharges.length > 0 ? (
+                        parkingCharges.map((charge) => (
+                          <tr
+                            key={charge._id}
+                            className="border-b hover:bg-gray-50"
+                          >
+                            <td className="py-3 px-4">
+                              <span className="font-medium text-gray-900">
+                                {charge.vehicleType}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-lg font-semibold text-green-600">
+                                ₹{charge.amount}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                                {charge.duration}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-gray-600">
+                              {charge.description || "-"}
+                            </td>
+                            <td className="py-3 px-4">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                  charge.isActive
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-gray-100 text-gray-700"
+                                }`}
+                              >
+                                {charge.isActive ? "Active" : "Inactive"}
+                              </span>
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <div className="inline-flex gap-2">
+                                <button
+                                  onClick={() => editParkingCharge(charge)}
+                                  className="px-3 py-1 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => deleteParkingCharge(charge._id)}
+                                  className="px-3 py-1 rounded-md bg-red-500 text-white hover:bg-red-600 text-xs"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td
+                            colSpan="6"
+                            className="py-8 text-center text-gray-500"
+                          >
+                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+                              <svg
+                                className="h-6 w-6 text-gray-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                />
+                              </svg>
+                            </div>
+                            <h3 className="text-sm font-medium text-gray-900 mb-2">
+                              No parking charges set
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              Add parking charges for different vehicle types
+                              above.
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
+      
       <SelectSlotPopup
         isOpen={showSlotPopup}
         slots={availableSlots}
