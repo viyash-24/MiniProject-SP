@@ -5,7 +5,7 @@ const parkingChargeSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    enum: ['Car', 'Bike', 'Van', 'Bus', 'Truck', 'Auto', 'SUV', 'Other'],
+    enum: ['Car', 'Bike', 'Van', 'Auto', 'Other'],
   },
   amount: {
     type: Number,
@@ -45,7 +45,7 @@ parkingChargeSchema.index({ isActive: 1 });
 
 
 parkingChargeSchema.methods.formatCharge = function() {
-  return `₹${this.amount} ${this.duration}`;
+  return `Rs ${this.amount} ${this.duration}`;
 };
 
 export const ParkingCharge = mongoose.model('ParkingCharge', parkingChargeSchema);

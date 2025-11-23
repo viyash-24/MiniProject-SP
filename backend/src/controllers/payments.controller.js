@@ -1,8 +1,9 @@
 import { Payment } from '../models/Payment.js';
 import { Vehicle } from '../models/Vehicle.js';
+import { ParkingCharge } from '../models/ParkingCharge.js';
 import Stripe from 'stripe';
-import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
+import { sendPaymentReceiptEmail } from '../utils/email.js';
 
 // Initialize Stripe with environment configuration
 let stripe;
@@ -21,14 +22,9 @@ try {
 }
 
 //send mail for user
-async function sendEmail(to, subject, html) {
+async function sendEmail(details) {
   try {
-    if (!env.EMAIL_USER || !env.EMAIL_PASS) return;
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: { user: env.EMAIL_USER, pass: env.EMAIL_PASS },
-    });
-    await transporter.sendMail({ from: env.EMAIL_USER, to, subject, html });
+    await sendPaymentReceiptEmail(details);
   } catch (err) {
     // swallow email errors to not break payment flow
     console.error('Email send failed:', err?.message || err);
@@ -71,8 +67,20 @@ export async function createPaymentIntent(req, res) {
 
     console.log(' Vehicle found:', vehicleData.plate);
 
-    // Use fixed amount for faster processing (₹50 default)
-    const amount = 50; // INR
+    // Resolve amount from active parking charge, with a safe default
+    let amount = 50; // default fallback
+    try {
+      const charge = await ParkingCharge.findOne({
+        vehicleType: vehicleData.vehicleType,
+        isActive: true,
+      }).lean();
+      if (charge?.amount && charge.amount > 0) {
+        amount = charge.amount;
+      }
+    } catch (err) {
+      console.error(' Failed to load parking charge for vehicle type:', err?.message || err);
+    }
+
     const currency = 'inr';
 
     // Create payment intent immediately without complex calculations
@@ -138,16 +146,18 @@ export async function confirmStripePayment(req, res) {
 
     // Send receipt via email if available
     if (v.userEmail) {
-      await sendEmail(
-        v.userEmail,
-        `Parking Payment Receipt - ${v.plate}`,
-        `<h3>Payment Successful</h3>
-         <p>Vehicle: <b>${v.plate}</b></p>
-         <p>Amount: <b>₹ ${amount}</b></p>
-         <p>Method: <b>Stripe</b></p>
-         <p>Receipt: <b>${intent.id}</b></p>
-         <p>Thank you for using our Smart Parking System.</p>`
-      );
+      await sendEmail({
+        to: v.userEmail,
+        userName: v.userName,
+        amount,
+        transactionId: intent.id,
+        paymentDate: p.paymentDate || p.createdAt,
+        vehiclePlate: v.plate,
+        vehicleType: v.vehicleType,
+        slotNumber: v.slotNumber || null,
+        parkingAreaName: null,
+        method: 'Stripe',
+      });
     }
 
     res.json({ vehicle: v, payment: p });
