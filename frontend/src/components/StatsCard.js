@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 
 const StatsCard = ({ title, value, icon, color = 'blue', loading = false }) => {
   const colorClasses = {
@@ -10,7 +11,12 @@ const StatsCard = ({ title, value, icon, color = 'blue', loading = false }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 hover:shadow-md transition-shadow card-elevated">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+      className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-700 p-6 hover:shadow-md transition-shadow card-elevated"
+    >
       <div className="flex items-center">
         <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
           {icon}
@@ -24,7 +30,7 @@ const StatsCard = ({ title, value, icon, color = 'blue', loading = false }) => {
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
