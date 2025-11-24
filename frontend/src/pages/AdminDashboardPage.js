@@ -908,7 +908,7 @@ const AdminDashboardPage = () => {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Search vehicles, users, status..."
-                  className="w-72 rounded-md border border-gray-300 bg-white text-gray-900 rounded-lg focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                  className="w-72 border border-gray-300 bg-white text-gray-900 rounded-lg focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                 />
                 <div className="text-sm text-gray-600 dark:text-slate-400">
                   Total: {filteredVehicles.length}
