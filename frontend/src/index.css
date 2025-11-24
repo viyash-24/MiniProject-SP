@@ -9,6 +9,8 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #f3f4f6; /* subtle gray background */
+  color: #020617; /* near-black text for better contrast */
 }
 
 code {
@@ -24,4 +26,57 @@ code {
   --color-background: #121212;
   --color-text: white;
 }
+
+/* Simple animation + hover utility classes for micro-interactions */
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-fade-in {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+.card-elevated {
+  transition: transform 180ms ease-out, box-shadow 180ms ease-out, background-color 180ms ease-out;
+}
+
+.card-elevated:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.18);
+}
+
+.btn-soft {
+  transition: transform 150ms ease-out, box-shadow 150ms ease-out, background-color 150ms ease-out, color 150ms ease-out;
+}
+
+.btn-soft:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.35);
+}
+
 /* ... rest of your styles ... */
+
+/* Extra motion utilities */
+@keyframes float-slow {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}
+
+.float-slow {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.soft-zoom {
+  transition: transform 300ms ease;
+}
+.soft-zoom:hover {
+  transform: scale(1.02);
+}

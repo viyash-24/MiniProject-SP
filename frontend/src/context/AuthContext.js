@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { auth, googleProvider, db } from '../firebase';
-import { onAuthStateChanged, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { onAuthStateChanged, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, getAdditionalUserInfo } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 const AuthContext = createContext({ user: null, isAdmin: false });
@@ -54,8 +54,38 @@ export const AuthProvider = ({ children }) => {
     return () => unsub();
   }, [user?.email]);
 
+  const googlePromiseRef = useRef(null);
   const loginWithGoogle = async () => {
-    await signInWithPopup(auth, googleProvider);
+    if (googlePromiseRef.current) return googlePromiseRef.current;
+    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const p = (async () => {
+      const result = await signInWithPopup(auth, googleProvider);
+      const u = result?.user;
+      const info = getAdditionalUserInfo(result);
+      const email = (u?.email || u?.providerData?.[0]?.email || '').toLowerCase().trim();
+      const name = u?.displayName || (email ? email.split('@')[0] : 'User');
+
+      if (info?.isNewUser && u?.uid && email) {
+        await setDoc(doc(db, 'users', u.uid), {
+          uid: u.uid,
+          name: name || '',
+          email,
+          phone: '',
+          createdAt: new Date().toISOString(),
+        }, { merge: true });
+
+        try {
+          await fetch(`${API_URL}/auth/enroll-email`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to: email, name }),
+          });
+        } catch (_) {}
+      }
+      return u;
+    })();
+    googlePromiseRef.current = p.finally(() => { googlePromiseRef.current = null; });
+    return p;
   };
 
   // Register using email/password and create a Firestore user document

@@ -14,9 +14,11 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <AuthProvider>
-      <Elements stripe={stripePromise}>
-        <App />
-      </Elements>
+      <ThemeProvider>
+        <Elements stripe={stripePromise}>
+          <App />
+        </Elements>
+      </ThemeProvider>
     </AuthProvider>
   </React.StrictMode>
 );
