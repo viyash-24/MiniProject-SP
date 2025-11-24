@@ -46,32 +46,61 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
-      <h1 className="text-2xl font-semibold mb-4">Edit Profile</h1>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Display name</label>
-          <input value={displayName} onChange={e => setDisplayName(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" />
+    <div className="min-h-[70vh] bg-gradient-to-br from-blue-50 via-white to-blue-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center px-4 py-12 page-fade-in">
+      <div className="w-full max-w-3xl bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-800 shadow-2xl rounded-2xl p-8 card-elevated">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-slate-50">Edit Profile</h1>
+          <p className="text-sm text-gray-600 dark:text-slate-300 mt-1">
+            Update your personal information and account details.
+          </p>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Email</label>
-          <input value={email} onChange={e => setEmail(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" />
-          <p className="text-xs text-gray-500 mt-1">Changing your email may require re-authentication for security.</p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Photo URL</label>
-          <input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">New password</label>
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} className="mt-1 block w-full border rounded-md px-3 py-2" />
-          <p className="text-xs text-gray-500 mt-1">Leave blank to keep your current password. Updating password may require recent login.</p>
-        </div>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">Display name</label>
+            <input
+              value={displayName}
+              onChange={e => setDisplayName(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:border-primary focus:ring-primary px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">Email</label>
+            <input
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:border-primary focus:ring-primary px-3 py-2"
+            />
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Changing your email may require re-authentication for security.</p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">Photo URL</label>
+            <input
+              value={photoUrl}
+              onChange={e => setPhotoUrl(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:border-primary focus:ring-primary px-3 py-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">New password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:border-primary focus:ring-primary px-3 py-2"
+            />
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Leave blank to keep your current password. Updating password may require recent login.</p>
+          </div>
 
-        <div>
-          <button disabled={loading} className="px-4 py-2 bg-primary text-white rounded-md">{loading ? 'Saving...' : 'Save changes'}</button>
-        </div>
-      </form>
+          <div>
+            <button
+              disabled={loading}
+              className="inline-flex items-center justify-center px-4 py-2 bg-primary hover:bg-primary-dark disabled:opacity-70 text-white rounded-md text-sm font-medium transition-colors btn-soft"
+            >
+              {loading ? 'Saving...' : 'Save changes'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

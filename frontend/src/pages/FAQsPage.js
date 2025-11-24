@@ -4,14 +4,14 @@ const FAQItem = ({ question, answer }) => {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <div className="border-b border-gray-200">
+    <div className="border-b border-gray-200 dark:border-slate-700">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between py-5 text-left hover:text-blue-600 transition-colors"
       >
-        <span className="font-semibold text-gray-900">{question}</span>
+        <span className="font-semibold text-gray-900 dark:text-slate-50">{question}</span>
         <svg
-          className={`h-5 w-5 text-gray-500 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+          className={`h-5 w-5 text-gray-500 dark:text-slate-400 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -20,7 +20,7 @@ const FAQItem = ({ question, answer }) => {
         </svg>
       </button>
       {isOpen && (
-        <div className="pb-5 text-gray-600">
+        <div className="pb-5 text-gray-600 dark:text-slate-300">
           {answer}
         </div>
       )}
@@ -126,19 +126,19 @@ const FAQsPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 page-fade-in">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Frequently Asked Questions</h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-slate-50 mb-4">Frequently Asked Questions</h1>
+          <p className="text-xl text-gray-600 dark:text-slate-300 max-w-3xl mx-auto">
             Find answers to common questions about Smart Parking
           </p>
         </div>
 
         <div className="space-y-8">
           {faqs.map((category, idx) => (
-            <div key={idx} className="bg-white rounded-lg shadow-sm border p-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+            <div key={idx} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-6 card-elevated">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-50 mb-6 flex items-center gap-2">
                 <span className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center text-white text-sm">
                   {idx + 1}
                 </span>
@@ -157,14 +157,14 @@ const FAQsPage = () => {
           ))}
         </div>
 
-        <div className="mt-12 bg-blue-50 border border-blue-200 rounded-lg p-8 text-center">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Still have questions?</h3>
-          <p className="text-gray-700 mb-6">
+        <div className="mt-12 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-2xl p-8 text-center card-elevated">
+          <h3 className="text-xl font-bold text-gray-900 dark:text-slate-50 mb-4">Still have questions?</h3>
+          <p className="text-gray-700 dark:text-slate-300 mb-6">
             Cannot find the answer you are looking for? Our support team is here to help.
           </p>
           <a
             href="/contact"
-            className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center px-6 py-3 bg-primary hover:bg-primary-dark text-white rounded-full shadow-md shadow-blue-500/30 btn-soft"
           >
             Contact Support
             <svg className="ml-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
