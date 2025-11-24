@@ -3,14 +3,17 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import SelectSlotPopup from "../components/SelectSlotPopup";
+import MapPicker from "../components/MapPicker";
+import useStats from "../hooks/useStats";
+import StatsCard from "../components/StatsCard";
 
 const TabButton = ({ active, onClick, children }) => (
   <button
     onClick={onClick}
     className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ${
       active
-        ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light"
-        : "text-gray-600 hover:text-primary dark:text-slate-300 dark:hover:text-primary-light"
+        ? "bg-primary/10 text-primary shadow-sm dark:bg-primary/20 dark:text-primary-light"
+        : "text-gray-600 hover:text-primary hover:bg-gray-50/70 dark:text-slate-300 dark:hover:text-primary-light dark:hover:bg-slate-800/70"
     }`}
   >
     {children}
@@ -19,7 +22,8 @@ const TabButton = ({ active, onClick, children }) => (
 
 const AdminDashboardPage = () => {
   const { user } = useAuth();
-  
+  const { stats, loading: statsLoading, error: statsError } = useStats();
+
   // Add page fade-in animation
   useEffect(() => {
     document.body.classList.add('page-fade-in');
@@ -44,15 +48,24 @@ const AdminDashboardPage = () => {
   const [newSlot, setNewSlot] = useState({ name: "", total: 50 });
   const [selectedParkingArea, setSelectedParkingArea] = useState("");
   const [newCharge, setNewCharge] = useState({
-    vehicleType: "",
-    amount: 0,
+    vehicleType: "Car",
+    amount: "",
     duration: "per hour",
+    description: "",
   });
   const [editingCharge, setEditingCharge] = useState(null);
   const [availableSlots, setAvailableSlots] = useState([]);
   const [showSlotPopup, setShowSlotPopup] = useState(false);
   const [selectedSlotNumber, setSelectedSlotNumber] = useState(null);
-  
+  const [newParkingArea, setNewParkingArea] = useState({
+    name: "",
+    address: "",
+    latitude: "",
+    longitude: "",
+    slotAmount: 20,
+    photo: "",
+  });
+
   const vehicleTypes = [
     "Car",
     "Bike",
@@ -402,11 +415,147 @@ const AdminDashboardPage = () => {
     });
   };
 
+  const resetParkingAreaForm = () =>
+    setNewParkingArea({
+      name: "",
+      address: "",
+      latitude: "",
+      longitude: "",
+      slotAmount: 20,
+      photo: "",
+    });
+
+  const createParkingArea = async (e) => {
+    e.preventDefault();
+    const { name, address, latitude, longitude, slotAmount, photo } =
+      newParkingArea;
+
+    if (!name.trim() || !address.trim() || !latitude || !longitude) {
+      toast.error("Please fill in name, address, and coordinates");
+      return;
+    }
+
+    const parsedLat = Number(latitude);
+    const parsedLng = Number(longitude);
+    const parsedSlots = Number(slotAmount);
+
+    if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) {
+      toast.error("Latitude and longitude must be valid numbers");
+      return;
+    }
+
+    if (!Number.isFinite(parsedSlots) || parsedSlots <= 0) {
+      toast.error("Total slots must be greater than 0");
+      return;
+    }
+
+    const promise = async () => {
+      const res = await fetch(`${API_URL}/parking-areas`, {
+        method: "POST",
+        headers: authHeader,
+        body: JSON.stringify({
+          name: name.trim(),
+          address: address.trim(),
+          slotAmount: parsedSlots,
+          photo: photo?.trim() || undefined,
+          location: {
+            latitude: parsedLat,
+            longitude: parsedLng,
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create area");
+
+      setParkingAreas((prev) => [data.parkingArea, ...prev]);
+      resetParkingAreaForm();
+      return "Parking area created!";
+    };
+
+    toast.promise(promise(), {
+      loading: "Creating parking area...",
+      success: (msg) => msg,
+      error: (err) => err.message || "Failed to create parking area",
+    });
+  };
+
+  const updateParkingAreaDetails = async (areaId, payload, successMsg) => {
+    const res = await fetch(`${API_URL}/parking-areas/${areaId}`, {
+      method: "PUT",
+      headers: authHeader,
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed to update area");
+    setParkingAreas((prev) =>
+      prev.map((area) => (area._id === areaId ? data.parkingArea : area))
+    );
+    if (successMsg) toast.success(successMsg);
+  };
+
+  const toggleParkingAreaStatus = async (area) => {
+    const promise = async () => {
+      await updateParkingAreaDetails(area._id, { active: !area.active });
+      return area.active ? "Parking area deactivated" : "Parking area activated";
+    };
+
+    toast.promise(promise(), {
+      loading: "Updating status...",
+      success: (msg) => msg,
+      error: (err) => err.message || "Failed to update status",
+    });
+  };
+
+  const deleteParkingAreaEntry = async (areaId) => {
+    if (
+      !window.confirm(
+        "Delete this parking area? This cannot be undone and may impact active slots."
+      )
+    ) {
+      return;
+    }
+
+    const promise = async () => {
+      const res = await fetch(`${API_URL}/parking-areas/${areaId}`, {
+        method: "DELETE",
+        headers: authHeader,
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to delete area");
+      setParkingAreas((prev) => prev.filter((area) => area._id !== areaId));
+      return "Parking area deleted";
+    };
+
+    toast.promise(promise(), {
+      loading: "Deleting area...",
+      success: (msg) => msg,
+      error: (err) => err.message || "Failed to delete parking area",
+    });
+  };
+
+  const resetChargeForm = () => {
+    setNewCharge({
+      vehicleType: "Car",
+      amount: "",
+      duration: "per hour",
+      description: "",
+    });
+    setEditingCharge(null);
+  };
+
   // Parking Charges Management Functions
   const createOrUpdateParkingCharge = async (e) => {
     e.preventDefault();
     if (!newCharge.vehicleType || !newCharge.amount) {
       toast.error("Please fill in all required fields");
+      return;
+    }
+
+    const parsedAmount = Number(newCharge.amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+      toast.error("Amount must be a positive number");
       return;
     }
 
@@ -418,7 +567,12 @@ const AdminDashboardPage = () => {
       const res = await fetch(url, {
         method: editingCharge ? "PUT" : "POST",
         headers: authHeader,
-        body: JSON.stringify(newCharge),
+        body: JSON.stringify({
+          vehicleType: newCharge.vehicleType,
+          amount: parsedAmount,
+          duration: newCharge.duration,
+          description: newCharge.description,
+        }),
       });
 
       const data = await res.json();
@@ -433,8 +587,7 @@ const AdminDashboardPage = () => {
         setParkingCharges((prev) => [data.charge, ...prev]);
       }
 
-      setNewCharge({ vehicleType: "", amount: 0, duration: "per hour" });
-      setEditingCharge(null);
+      resetChargeForm();
 
       return editingCharge
         ? "Parking charge updated!"
@@ -483,6 +636,30 @@ const AdminDashboardPage = () => {
     setEditingCharge(charge);
   };
 
+  const toggleChargeStatus = async (charge) => {
+    const promise = async () => {
+      const res = await fetch(`${API_URL}/parking-charges/${charge._id}`, {
+        method: "PUT",
+        headers: authHeader,
+        body: JSON.stringify({ isActive: !charge.isActive }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to update charge");
+
+      setParkingCharges((prev) =>
+        prev.map((c) => (c._id === data.charge._id ? data.charge : c))
+      );
+      return charge.isActive ? "Charge deactivated" : "Charge activated";
+    };
+
+    toast.promise(promise(), {
+      loading: "Updating charge...",
+      success: (msg) => msg,
+      error: (err) => err.message || "Failed to update charge",
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-200">
       {/* Header */}
@@ -500,70 +677,62 @@ const AdminDashboardPage = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow card-elevated">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Total Users</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">{usersList.length}</p>
-              </div>
-              <div className="p-3 rounded-full bg-blue-50 dark:bg-blue-900/30">
-                <svg className="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+        {/* System Statistics */}
+        <div className="mb-10">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-50 text-center mb-6">System Statistics</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatsCard
+              title="Total Parking Areas"
+              value={stats.totalParkingAreas}
+              loading={statsLoading}
+              color="blue"
+              icon={
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                 </svg>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow card-elevated">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Active Vehicles</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
-                  {vehicles.filter(v => v.status === 'active').length}
-                </p>
-              </div>
-              <div className="p-3 rounded-full bg-green-50 dark:bg-green-900/30">
-                <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              }
+            />
+            <StatsCard
+              title="Current Active Users"
+              value={stats.dailyActiveUsers}
+              loading={statsLoading}
+              color="green"
+              icon={
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              }
+            />
+            <StatsCard
+              title="Total Vehicles"
+              value={stats.totalVehicles}
+              loading={statsLoading}
+              color="purple"
+              icon={
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" />
                 </svg>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow card-elevated">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Available Slots</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
-                  {slots.filter(s => s.status === 'available').length}
-                </p>
-              </div>
-              <div className="p-3 rounded-full bg-purple-50 dark:bg-purple-900/30">
-                <svg className="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              }
+            />
+            <StatsCard
+              title="Total Revenue"
+              value={`₹${stats.totalRevenue.toLocaleString()}`}
+              loading={statsLoading}
+              color="orange"
+              icon={
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
                 </svg>
-              </div>
-            </div>
+              }
+            />
           </div>
-          
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-slate-800 hover:shadow-md transition-shadow card-elevated">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-500 dark:text-slate-400">Total Revenue</p>
-                <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
-                  ${payments.reduce((sum, p) => sum + (p.amount || 0), 0).toFixed(2)}
-                </p>
-              </div>
-              <div className="p-3 rounded-full bg-yellow-50 dark:bg-yellow-900/30">
-                <svg className="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+
+          {statsError && (
+            <div className="mt-6 p-4 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-red-600 dark:text-red-300 text-sm">Failed to load statistics: {statsError}</p>
             </div>
-          </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
@@ -632,7 +801,7 @@ const AdminDashboardPage = () => {
                     onChange={(e) =>
                       setNewUser((u) => ({ ...u, name: e.target.value }))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                   />
                   <input
                     placeholder="Email"
@@ -641,7 +810,7 @@ const AdminDashboardPage = () => {
                     onChange={(e) =>
                       setNewUser((u) => ({ ...u, email: e.target.value }))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                   />
                   <input
                     placeholder="Phone"
@@ -649,7 +818,7 @@ const AdminDashboardPage = () => {
                     onChange={(e) =>
                       setNewUser((u) => ({ ...u, phone: e.target.value }))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                   />
                 </div>
                 <div className="space-y-4">
@@ -661,7 +830,7 @@ const AdminDashboardPage = () => {
                     onChange={(e) =>
                       setNewVehicle((v) => ({ ...v, plate: e.target.value }))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                   />
 
                   <select
@@ -672,7 +841,7 @@ const AdminDashboardPage = () => {
                         vehicleType: e.target.value,
                       }))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                   >
                     {vehicleTypes.map((type) => (
                       <option key={type} value={type}>
@@ -689,7 +858,7 @@ const AdminDashboardPage = () => {
                       setAvailableSlots([]);
                       setNewVehicle((v) => ({ ...v, slotName: "" }));
                     }}
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                   >
                     <option value="">Select Parking Area (Optional)</option>
                     {parkingAreas
@@ -706,7 +875,7 @@ const AdminDashboardPage = () => {
                       placeholder="Slot (optional)"
                       value={newVehicle.slotName}
                       readOnly
-                      className="flex-1 rounded-md border-gray-300 focus:border-primary focus:ring-primary bg-gray-50"
+                      className="flex-1 rounded-md border-gray-300 focus:border-primary focus:ring-primary bg-gray-50 dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                     />
                     <button
                       type="button"
@@ -719,12 +888,12 @@ const AdminDashboardPage = () => {
                         await fetchAvailableSlotsForArea(selectedParkingArea);
                         setShowSlotPopup(true);
                       }}
-                      className="px-3 py-2 rounded-md bg-primary text-white disabled:bg-gray-400"
+                      className="px-3 py-2 rounded-md bg-primary text-white disabled:bg-gray-400 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
                     >
                       Select Slot
                     </button>
                   </div>
-                  <button className="w-full px-4 py-2 rounded-md bg-gray-900 text-white">
+                  <button className="w-full px-4 py-2 rounded-md bg-gray-900 text-white h-10 hover:bg-gray-800 dark:bg-primary dark:text-white dark:hover:bg-primary/90">
                     Add User & Vehicle
                   </button>
                 </div>
@@ -739,17 +908,17 @@ const AdminDashboardPage = () => {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Search vehicles, users, status..."
-                  className="w-72 rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                  className="w-72 rounded-md border border-gray-300 bg-white text-gray-900 rounded-lg focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                 />
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600 dark:text-slate-400">
                   Total: {filteredVehicles.length}
                 </div>
               </div>
 
-              <div className="mt-4 overflow-x-auto">
+              <div className="mt-4 overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-600 border-b">
+                    <tr className="text-left text-gray-600 border-b border-gray-100 bg-gray-50/80 dark:text-slate-300 dark:border-slate-800 dark:bg-slate-900/80">
                       <th className="py-3 pr-4">Plate</th>
                       <th className="py-3 pr-4">User</th>
                       <th className="py-3 pr-4">Phone</th>
@@ -761,12 +930,15 @@ const AdminDashboardPage = () => {
                   </thead>
                   <tbody>
                     {filteredVehicles.map((v) => (
-                      <tr key={v._id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 pr-4 whitespace-nowrap">{v.plate}</td>
-                        <td className="py-3 pr-4">
+                      <tr
+                        key={v._id}
+                        className="border-b border-gray-100 hover:bg-gray-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
+                      >
+                        <td className="py-3 pr-4 whitespace-nowrap text-gray-900 dark:text-slate-50">{v.plate}</td>
+                        <td className="py-3 pr-4 text-gray-900 dark:text-slate-100">
                           {v.userName || v.userEmail || "-"}
                         </td>
-                        <td className="py-3 pr-4">{v.userPhone || "-"}</td>
+                        <td className="py-3 pr-4 text-gray-700 dark:text-slate-300">{v.userPhone || "-"}</td>
                         <td className="py-3 pr-4 text-center">
                           {v.parkingAreaId
                             ? parkingAreas.find(
@@ -776,27 +948,27 @@ const AdminDashboardPage = () => {
                         </td>
                         <td className="py-3 pr-4 text-center">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs ${
+                            className={`px-2 py-1 rounded-full text-xs font-medium ${
                               v.status === "Parked"
-                                ? "bg-yellow-100 text-yellow-800"
+                                ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300"
                                 : v.status === "Paid"
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
                                 : v.status === "Exited"
-                                ? "bg-gray-100 text-gray-700"
-                                : "bg-blue-100 text-blue-700"
+                                ? "bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-200"
+                                : "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
                             }`}
                           >
                             {v.status || "-"}
                           </span>
                         </td>
-                        <td className="py-3 pr-4 text-center">
+                        <td className="py-3 pr-4 text-center text-gray-800 dark:text-slate-200">
                           {v.paymentStatus || "Unpaid"}
                         </td>
                         <td className="py-3 pr-4 text-right">
                           <div className="inline-flex gap-2">
                             {v.paymentStatus !== "Paid" && (
                               <button
-                                className="px-2 py-1 rounded-md border text-xs"
+                                className="px-2 py-1 rounded-md border text-xs border-gray-300 text-gray-800 hover:bg-gray-50 dark:border-slate-600 dark:text-slate-100 dark:hover:bg-slate-800"
                                 onClick={() => markPaid(v)}
                               >
                                 Mark as Paid
@@ -804,7 +976,7 @@ const AdminDashboardPage = () => {
                             )}
                             {v.status !== "Exited" && (
                               <button
-                                className="px-2 py-1 rounded-md bg-gray-900 text-white text-xs"
+                                className="px-2 py-1 rounded-md bg-gray-900 text-white text-xs hover:bg-gray-800 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200 disabled:opacity-60"
                                 onClick={() => exitVehicle(v)}
                                 disabled={v.paymentStatus !== "Paid"}
                               >
@@ -823,10 +995,10 @@ const AdminDashboardPage = () => {
 
           {tab === "users" && (
             <div className="p-4">
-              <div className="mt-4 overflow-x-auto">
+              <div className="mt-4 overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-600 border-b">
+                    <tr className="text-left text-gray-600 border-b border-gray-100 bg-gray-50/80 dark:text-slate-300 dark:border-slate-800 dark:bg-slate-900/80">
                       <th className="py-3 pr-4">Name</th>
                       <th className="py-3 pr-4">Email</th>
                       <th className="py-3 pr-4">Phone</th>
@@ -835,13 +1007,16 @@ const AdminDashboardPage = () => {
                   </thead>
                   <tbody>
                     {usersList.map((u) => (
-                      <tr key={u._id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 pr-4 whitespace-nowrap">
+                      <tr
+                        key={u._id}
+                        className="border-b border-gray-100 hover:bg-gray-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
+                      >
+                        <td className="py-3 pr-4 whitespace-nowrap text-gray-900 dark:text-slate-50">
                           {u.name || "-"}
                         </td>
-                        <td className="py-3 pr-4">{u.email}</td>
-                        <td className="py-3 pr-4">{u.phone || "-"}</td>
-                        <td className="py-3 pr-4">{u.role || "user"}</td>
+                        <td className="py-3 pr-4 text-gray-800 dark:text-slate-200">{u.email}</td>
+                        <td className="py-3 pr-4 text-gray-700 dark:text-slate-300">{u.phone || "-"}</td>
+                        <td className="py-3 pr-4 text-gray-700 dark:text-slate-300">{u.role || "user"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -854,10 +1029,10 @@ const AdminDashboardPage = () => {
             <div className="p-4">
               <form
                 onSubmit={createSlot}
-                className="mb-6 p-4 border rounded-lg flex items-end gap-3"
+                className="mb-6 p-4 border rounded-lg flex items-end gap-3 bg-white shadow-sm border-gray-200 dark:bg-slate-900/80 dark:border-slate-800"
               >
                 <div className="flex-grow">
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">
                     Area Name
                   </label>
                   <input
@@ -866,12 +1041,12 @@ const AdminDashboardPage = () => {
                     onChange={(e) =>
                       setNewSlot((s) => ({ ...s, name: e.target.value }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-200">
                     Total Spots
                   </label>
                   <input
@@ -881,11 +1056,11 @@ const AdminDashboardPage = () => {
                     onChange={(e) =>
                       setNewSlot((s) => ({ ...s, total: Number(e.target.value) }))
                     }
-                    className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                    className="mt-1 w-full rounded-md border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                     required
                   />
                 </div>
-                <button className="px-4 py-2 rounded-md bg-gray-900 text-white h-10">
+                <button className="px-4 py-2 rounded-md bg-gray-900 text-white h-10 hover:bg-gray-800 dark:bg-primary dark:text-white dark:hover:bg-primary/90">
                   Create Slot
                 </button>
               </form>
@@ -894,17 +1069,17 @@ const AdminDashboardPage = () => {
                 {slots.map((s) => (
                   <div
                     key={s._id}
-                    className="p-5 border rounded-xl bg-white shadow-sm"
+                    className="p-5 border rounded-xl bg-white shadow-sm border-gray-200 dark:bg-slate-900/80 dark:border-slate-800"
                   >
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500 dark:text-slate-400">
                       {s.area || s.name || "Area"}
                     </div>
-                    <div className="mt-2 text-2xl font-bold text-gray-900">
+                    <div className="mt-2 text-2xl font-bold text-gray-900 dark:text-slate-50">
                       {s.free ?? 0} / {s.total ?? 0} free
                     </div>
-                    <div className="mt-3 h-2 bg-gray-100 rounded">
+                    <div className="mt-3 h-2 bg-gray-100 rounded dark:bg-slate-800">
                       <div
-                        className="h-2 bg-green-500 rounded"
+                        className="h-2 bg-green-500 rounded dark:bg-green-400"
                         style={{
                           width: `${
                             Math.max(
@@ -926,7 +1101,7 @@ const AdminDashboardPage = () => {
                             free: s.free ?? 0,
                           })
                         }
-                        className="rounded-md border-gray-300 text-sm"
+                        className="rounded-md border-gray-300 text-sm bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                       />
                       <input
                         type="number"
@@ -938,7 +1113,7 @@ const AdminDashboardPage = () => {
                             free: Number(e.target.value),
                           })
                         }
-                        className="rounded-md border-gray-300 text-sm"
+                        className="rounded-md border-gray-300 text-sm bg-white dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                       />
                     </div>
                   </div>
@@ -950,18 +1125,18 @@ const AdminDashboardPage = () => {
           {tab === "payments" && (
             <div className="p-4">
               <div className="mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
                   Payment History
                 </h2>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 mt-1 dark:text-slate-400">
                   Complete payment records from all transactions (View Only)
                 </p>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-xl border border-gray-100 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/80">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-600 border-b bg-gray-50">
+                    <tr className="text-left text-gray-600 border-b border-gray-100 bg-gray-50 dark:text-slate-300 dark:border-slate-800 dark:bg-slate-900/80">
                       <th className="py-3 px-4 font-medium">
                         Vehicle Number Plate
                       </th>
@@ -977,41 +1152,44 @@ const AdminDashboardPage = () => {
                   </thead>
                   <tbody>
                     {payments.map((p) => (
-                      <tr key={p._id} className="border-b hover:bg-gray-50">
+                      <tr
+                        key={p._id}
+                        className="border-b border-gray-100 hover:bg-gray-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
+                      >
                         <td className="py-3 px-4">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-gray-900 dark:text-slate-50">
                             {p.vehiclePlate || "-"}
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium">
+                          <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs font-medium dark:bg-slate-800 dark:text-slate-100">
                             {p.vehicleType || "-"}
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="text-gray-900">
+                          <div className="text-gray-900 dark:text-slate-100">
                             {p.userName || "N/A"}
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-600 dark:text-slate-400">
                             {p.userEmail || "-"}
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="font-semibold text-green-600">
+                          <div className="font-semibold text-green-600 dark:text-green-400">
                             ₹{p.amount || 0}
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="text-sm text-gray-900">
+                          <div className="text-sm text-gray-900 dark:text-slate-100">
                             {p.paymentDate
                               ? new Date(p.paymentDate).toLocaleDateString()
                               : p.createdAt
                               ? new Date(p.createdAt).toLocaleDateString()
                               : "-"}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-gray-500 dark:text-slate-400">
                             {p.paymentDate
                               ? new Date(p.paymentDate).toLocaleTimeString()
                               : p.createdAt
@@ -1023,12 +1201,12 @@ const AdminDashboardPage = () => {
                           <span
                             className={`px-2 py-1 rounded-full text-xs font-medium ${
                               p.status === "Success" || p.status === "Paid"
-                                ? "bg-green-100 text-green-700"
+                                ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
                                 : p.status === "Failed"
-                                ? "bg-red-100 text-red-700"
+                                ? "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
                                 : p.status === "Pending"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-gray-100 text-gray-700"
+                                ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300"
+                                : "bg-gray-100 text-gray-700 dark:bg-slate-800 dark:text-slate-200"
                             }`}
                           >
                             {p.status || "Pending"}
@@ -1041,10 +1219,10 @@ const AdminDashboardPage = () => {
               </div>
 
               {payments.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
+                <div className="text-center py-8 text-gray-500 dark:text-slate-400">
+                  <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4 dark:bg-slate-800">
                     <svg
-                      className="h-6 w-6 text-gray-400"
+                      className="h-6 w-6 text-gray-400 dark:text-slate-400"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -1057,10 +1235,10 @@ const AdminDashboardPage = () => {
                       />
                     </svg>
                   </div>
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">
+                  <h3 className="text-sm font-medium text-gray-900 mb-2 dark:text-slate-100">
                     No payment records yet
                   </h3>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
                     Payment records will appear here once users make payments.
                   </p>
                 </div>
@@ -1069,366 +1247,441 @@ const AdminDashboardPage = () => {
           )}
 
           {tab === "parking-areas" && (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-              <div className="p-4 border-b">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <h2 className="text-lg font-semibold">Parking Areas</h2>
-                  <div className="relative">
+            <div className="p-4 space-y-6">
+              <form
+                onSubmit={createParkingArea}
+                className="grid gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 md:grid-cols-2"
+              >
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                      Area Name
+                    </label>
                     <input
-                      type="text"
-                      placeholder="Search parking areas..."
-                      className="pl-10 pr-4 py-2 border rounded-lg w-full sm:w-64 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                      value={q}
-                      onChange={(e) => setQ(e.target.value)}
+                      value={newParkingArea.name}
+                      onChange={(e) =>
+                        setNewParkingArea((prev) => ({
+                          ...prev,
+                          name: e.target.value,
+                        }))
+                      }
+                      required
+                      placeholder="e.g., Basement Block A"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                     />
-                    <svg
-                      className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                      Address / Notes
+                    </label>
+                    <textarea
+                      value={newParkingArea.address}
+                      onChange={(e) =>
+                        setNewParkingArea((prev) => ({
+                          ...prev,
+                          address: e.target.value,
+                        }))
+                      }
+                      required
+                      rows={3}
+                      placeholder="Full address or quick directions"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                        Latitude
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={newParkingArea.latitude}
+                        onChange={(e) =>
+                          setNewParkingArea((prev) => ({
+                            ...prev,
+                            latitude: e.target.value,
+                          }))
+                        }
+                        required
+                        placeholder="12.9716"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                       />
-                    </svg>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                        Longitude
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={newParkingArea.longitude}
+                        onChange={(e) =>
+                          setNewParkingArea((prev) => ({
+                            ...prev,
+                            longitude: e.target.value,
+                          }))
+                        }
+                        required
+                        placeholder="77.5946"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                      Photo URL (optional)
+                    </label>
+                    <input
+                      value={newParkingArea.photo}
+                      onChange={(e) =>
+                        setNewParkingArea((prev) => ({
+                          ...prev,
+                          photo: e.target.value,
+                        }))
+                      }
+                      placeholder="https://example.com/photo.jpg"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    />
                   </div>
                 </div>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                      Total Slots
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newParkingArea.slotAmount}
+                      onChange={(e) =>
+                        setNewParkingArea((prev) => ({
+                          ...prev,
+                          slotAmount: e.target.value,
+                        }))
+                      }
+                      required
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    />
+                  </div>
+                  <MapPicker
+                    latitude={
+                      newParkingArea.latitude
+                        ? Number(newParkingArea.latitude)
+                        : undefined
+                    }
+                    longitude={
+                      newParkingArea.longitude
+                        ? Number(newParkingArea.longitude)
+                        : undefined
+                    }
+                    onLocationChange={(lat, lng) =>
+                      setNewParkingArea((prev) => ({
+                        ...prev,
+                        latitude: lat,
+                        longitude: lng,
+                      }))
+                    }
+                  />
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="submit"
+                      className="flex-1 rounded-lg bg-primary px-4 py-2 font-medium text-white shadow-primary/30 transition hover:bg-primary-dark"
+                    >
+                      Add Parking Area
+                    </button>
+                    <button
+                      type="button"
+                      onClick={resetParkingAreaForm}
+                      className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Search parking areas..."
+                  className="w-full flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 md:w-72"
+                />
+                <span className="text-sm text-gray-500 dark:text-slate-400">
+                  Total: {filteredParkingAreas.length}
+                </span>
               </div>
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Address
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Slots
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Created
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {filteredParkingAreas.length > 0 ? (
-                      filteredParkingAreas.map((area) => (
-                        <tr key={area._id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              {area.photo && (
-                                <div className="flex-shrink-0 h-10 w-10 mr-3">
-                                  <img
-                                    className="h-10 w-10 rounded-full object-cover"
-                                    src={area.photo}
-                                    alt={area.name}
-                                  />
-                                </div>
-                              )}
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {area.name}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {area.address}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              <span className="font-medium">
-                                {area.availableSlots || 0}
-                              </span>
-                              <span className="text-gray-500">
-                                {" "}
-                                / {area.totalSlots || area.slotAmount}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                area.active
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {area.active ? "Active" : "Inactive"}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(area.createdAt).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td
-                          colSpan="5"
-                          className="px-6 py-4 text-center text-sm text-gray-500"
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {filteredParkingAreas.map((area) => {
+                  const totalSlots =
+                    area.totalSlots ?? area.slotAmount ?? area.slots?.length ?? 0;
+                  const availableSlots = area.availableSlots ?? 0;
+                  const occupiedSlots =
+                    area.occupiedSlots ??
+                    Math.max(0, totalSlots - availableSlots);
+
+                  return (
+                    <div
+                      key={area._id}
+                      className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+                            {area.name}
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-slate-400">
+                            {area.address}
+                          </p>
+                        </div>
+                        <span
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                            area.active
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                              : "bg-gray-200 text-gray-600 dark:bg-slate-800 dark:text-slate-300"
+                          }`}
                         >
-                          No parking areas found
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                          {area.active ? "Active" : "Inactive"}
+                        </span>
+                      </div>
+                      <div className="mt-4 space-y-2 text-sm text-gray-700 dark:text-slate-300">
+                        <div className="flex justify-between">
+                          <span>Total Slots</span>
+                          <span className="font-semibold text-gray-900 dark:text-slate-50">
+                            {totalSlots}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Occupied</span>
+                          <span>{occupiedSlots}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Available</span>
+                          <span>{availableSlots}</span>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => toggleParkingAreaStatus(area)}
+                          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                        >
+                          {area.active ? "Deactivate" : "Activate"}
+                        </button>
+                        <button
+                          onClick={() => deleteParkingAreaEntry(area._id)}
+                          className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
+
+              {filteredParkingAreas.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-gray-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+                  No parking areas yet. Use the form above to add your first
+                  area.
+                </div>
+              )}
             </div>
           )}
 
           {tab === "parking-charges" && (
-            <div className="p-4">
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Manage Parking Charges
-                </h2>
-
-                {/* Add/Edit Form */}
-                <form
-                  onSubmit={createOrUpdateParkingCharge}
-                  className="bg-gray-50 p-4 rounded-lg border mb-6"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="p-4 space-y-6">
+              <form
+                onSubmit={createOrUpdateParkingCharge}
+                className="grid gap-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900/80 md:grid-cols-2"
+              >
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                      Vehicle Type
+                    </label>
+                    <select
+                      value={newCharge.vehicleType}
+                      onChange={(e) =>
+                        setNewCharge((prev) => ({
+                          ...prev,
+                          vehicleType: e.target.value,
+                        }))
+                      }
+                      required
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                    >
+                      {vehicleTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
-                        Vehicle Type
-                      </label>
-                      <select
-                        value={newCharge.vehicleType}
-                        onChange={(e) =>
-                          setNewCharge((c) => ({
-                            ...c,
-                            vehicleType: e.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
-                        required
-                        disabled={editingCharge}
-                      >
-                        <option value="">Select Type</option>
-                        {vehicleTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
                         Amount (₹)
                       </label>
                       <input
                         type="number"
-                        min="0"
-                        step="0.01"
+                        min="1"
                         value={newCharge.amount}
                         onChange={(e) =>
-                          setNewCharge((c) => ({
-                            ...c,
-                            amount: parseFloat(e.target.value),
+                          setNewCharge((prev) => ({
+                            ...prev,
+                            amount: e.target.value,
                           }))
                         }
-                        className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
                         required
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                       />
                     </div>
-
                     <div>
-                      <label className="block text-sm font-medium text-gray-700">
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
                         Duration
                       </label>
                       <select
                         value={newCharge.duration}
                         onChange={(e) =>
-                          setNewCharge((c) => ({
-                            ...c,
+                          setNewCharge((prev) => ({
+                            ...prev,
                             duration: e.target.value,
                           }))
                         }
-                        className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                       >
-                        <option value="per hour">Per Hour</option>
-                        <option value="per day">Per Day</option>
-                        <option value="flat rate">Flat Rate</option>
+                        <option value="per hour">Per hour</option>
+                        <option value="per day">Per day</option>
+                        <option value="per entry">Per entry</option>
                       </select>
                     </div>
-
-                    <div className="flex items-end gap-2">
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
-                      >
-                        {editingCharge ? "Update" : "Add"} Charge
-                      </button>
-                      {editingCharge && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditingCharge(null);
-                            setNewCharge({
-                              vehicleType: "",
-                              amount: 0,
-                              duration: "per hour",
-                            });
-                          }}
-                          className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400"
-                        >
-                          Cancel
-                        </button>
-                      )}
-                    </div>
                   </div>
-
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700">
-                      Description (Optional)
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                      Description
                     </label>
-                    <input
-                      type="text"
-                      value={newCharge.description || ""}
+                    <textarea
+                      rows={4}
+                      value={newCharge.description}
                       onChange={(e) =>
-                        setNewCharge((c) => ({
-                          ...c,
+                        setNewCharge((prev) => ({
+                          ...prev,
                           description: e.target.value,
                         }))
                       }
-                      placeholder="e.g., Standard parking rate for cars"
-                      className="mt-1 w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary"
+                      placeholder="Optional note shown to users"
+                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                     />
                   </div>
-                </form>
-
-                {/* Parking Charges List */}
-                <div className="overflow-x-auto">
-                  <table className="min-w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-gray-600 border-b bg-gray-50">
-                        <th className="py-3 px-4 font-medium">Vehicle Type</th>
-                        <th className="py-3 px-4 font-medium">Amount</th>
-                        <th className="py-3 px-4 font-medium">Duration</th>
-                        <th className="py-3 px-4 font-medium">Description</th>
-                        <th className="py-3 px-4 font-medium">Status</th>
-                        <th className="py-3 px-4 font-medium text-right">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {parkingCharges.length > 0 ? (
-                        parkingCharges.map((charge) => (
-                          <tr
-                            key={charge._id}
-                            className="border-b hover:bg-gray-50"
-                          >
-                            <td className="py-3 px-4">
-                              <span className="font-medium text-gray-900">
-                                {charge.vehicleType}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="text-lg font-semibold text-green-600">
-                                ₹{charge.amount}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
-                                {charge.duration}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-gray-600">
-                              {charge.description || "-"}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                  charge.isActive
-                                    ? "bg-green-100 text-green-700"
-                                    : "bg-gray-100 text-gray-700"
-                                }`}
-                              >
-                                {charge.isActive ? "Active" : "Inactive"}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-right">
-                              <div className="inline-flex gap-2">
-                                <button
-                                  onClick={() => editParkingCharge(charge)}
-                                  className="px-3 py-1 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300 text-xs"
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  onClick={() => deleteParkingCharge(charge._id)}
-                                  className="px-3 py-1 rounded-md bg-red-500 text-white hover:bg-red-600 text-xs"
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      ) : (
-                        <tr>
-                          <td
-                            colSpan="6"
-                            className="py-8 text-center text-gray-500"
-                          >
-                            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100 mb-4">
-                              <svg
-                                className="h-6 w-6 text-gray-400"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                />
-                              </svg>
-                            </div>
-                            <h3 className="text-sm font-medium text-gray-900 mb-2">
-                              No parking charges set
-                            </h3>
-                            <p className="text-sm text-gray-500">
-                              Add parking charges for different vehicle types
-                              above.
-                            </p>
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="submit"
+                      className="flex-1 rounded-lg bg-primary px-4 py-2 font-medium text-white shadow-primary/30 transition hover:bg-primary-dark"
+                    >
+                      {editingCharge ? "Update Charge" : "Add Charge"}
+                    </button>
+                    {editingCharge && (
+                      <button
+                        type="button"
+                        onClick={resetChargeForm}
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
+              </form>
+
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {parkingCharges.map((charge) => (
+                  <div
+                    key={charge._id}
+                    className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900/80"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-slate-400">
+                          Vehicle Type
+                        </p>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-slate-50">
+                          {charge.vehicleType}
+                        </h3>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          charge.isActive
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                            : "bg-gray-200 text-gray-600 dark:bg-slate-800 dark:text-slate-300"
+                        }`}
+                      >
+                        {charge.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                    <div className="mt-4 text-sm text-gray-600 dark:text-slate-400">
+                      <div className="flex items-center justify-between">
+                        <span>Amount</span>
+                        <span className="text-lg font-semibold text-gray-900 dark:text-slate-50">
+                          ₹{charge.amount}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex items-center justify-between">
+                        <span>Duration</span>
+                        <span>{charge.duration}</span>
+                      </div>
+                      {charge.description && (
+                        <p className="mt-3 text-xs text-gray-500 dark:text-slate-400">
+                          {charge.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => editParkingCharge(charge)}
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => toggleChargeStatus(charge)}
+                        className="rounded-lg border border-blue-200 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-500/10"
+                      >
+                        {charge.isActive ? "Deactivate" : "Activate"}
+                      </button>
+                      <button
+                        onClick={() => deleteParkingCharge(charge._id)}
+                        className="rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
+
+              {parkingCharges.length === 0 && (
+                <div className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-gray-500 dark:border-slate-700 dark:bg-slate-900/40 dark:text-slate-400">
+                  No parking charges configured yet.
+                </div>
+              )}
             </div>
           )}
         </div>
       </div>
-      
+
       <SelectSlotPopup
         isOpen={showSlotPopup}
         slots={availableSlots}
         onClose={() => setShowSlotPopup(false)}
         onSelect={(slotNumber) => {
           setSelectedSlotNumber(slotNumber);
-          setNewVehicle((v) => ({ ...v, slotName: `Slot ${slotNumber}` }));
+          setNewVehicle((prev) => ({ ...prev, slotName: `Slot ${slotNumber}` }));
           setShowSlotPopup(false);
+          toast.success(`Slot ${slotNumber} selected`);
         }}
       />
     </div>
