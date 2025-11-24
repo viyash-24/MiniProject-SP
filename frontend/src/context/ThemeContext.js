@@ -11,8 +11,13 @@ export const useTheme = () => {
 
 // After create the context, Create the Provider Component
 export const ThemeProvider = ({ children }) => {
-  // Initialize state based on localStorage or default to 'light'
-  const [theme, setTheme] = useState(localStorage.getItem("theme") || "light");
+  // Initialize from localStorage, otherwise detect system preference
+  const [theme, setTheme] = useState(() => {
+    const stored = localStorage.getItem("theme");
+    if (stored === "light" || stored === "dark") return stored;
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    return prefersDark ? "dark" : "light";
+  });
 
   // Finally, Effect to apply the theme class to the document body
   useEffect(() => {
