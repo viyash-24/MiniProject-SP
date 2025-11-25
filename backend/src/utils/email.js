@@ -53,7 +53,7 @@ export async function sendEmail({ to, subject, html }) {
     }
 
     await activeTransporter.sendMail({
-      from: env.EMAIL_FROM || env.EMAIL_USER,
+      from: env.EMAIL_FROM ,
       to,
       subject,
       html,
@@ -78,34 +78,18 @@ function resolveLoginUrl(loginUrlFromCaller) {
   return 'http://localhost:3000/login';
 }
 
-export async function sendEnrollmentEmail({ to, name, tempPassword, loginUrl }) {
-  const finalLoginUrl = resolveLoginUrl(loginUrl);
+export async function sendEnrollmentEmail({ to, name }) {
   const safeName = name || 'User';
 
-  const passwordBlock = tempPassword
-    ? `<p><b>Temporary password:</b> ${tempPassword}</p>
-       <p>Please change this password after your first login.</p>`
-    : '';
-
   const html = `
-    <h3>Welcome to Smart Urban Parking System</h3>
+    <h3>Enrollment Confirmation</h3>
     <p>Hi ${safeName},</p>
-    <p>Your account has been created successfully.</p>
-    <p><b>Username (email):</b> ${to}</p>
-    ${passwordBlock}
-    <p>You can log in using the link below:</p>
-    <p>
-      <a href="${finalLoginUrl}" style="padding:10px 16px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:4px;display:inline-block;">
-        Log in to your account
-      </a>
-    </p>
-    <p>If the button does not work, copy and paste this URL into your browser:</p>
-    <p>${finalLoginUrl}</p>
+    <p>You are enrolled to our parking. Welcome!</p>
   `;
 
   return sendEmail({
     to,
-    subject: 'Your Smart Parking Account',
+    subject: 'Parking Enrollment Confirmation',
     html,
   });
 }
