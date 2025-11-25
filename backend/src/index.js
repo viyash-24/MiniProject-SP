@@ -9,6 +9,7 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
+import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/users.routes.js';
 import vehicleRoutes from './routes/vehicles.routes.js';
 import slotRoutes from './routes/slots.routes.js';
@@ -61,6 +62,7 @@ app.use(rateLimit({ windowMs: 60 * 1000, max: 200 }));
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api/slots', slotRoutes);
