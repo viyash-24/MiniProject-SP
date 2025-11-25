@@ -1,6 +1,7 @@
 import { User } from '../models/User.js';
 import { comparePassword, hashPassword } from '../utils/passwords.js';
 import { signToken } from '../utils/jwt.js';
+import { sendEnrollmentEmail } from '../utils/email.js';
 
 
 export async function register(req, res) {
@@ -71,4 +72,19 @@ export async function updateProfile(req, res) {
 export async function logout(req, res) {
   res.clearCookie('token');
   res.json({ ok: true });
+}
+
+export async function enrollEmail(req, res) {
+  try {
+    const { to, name, loginUrl } = req.body || {};
+    const email = (to || '').toLowerCase().trim();
+    if (!email) return res.status(400).json({ error: 'Recipient email required' });
+
+    const ok = await sendEnrollmentEmail({ to: email, name: name || 'User', loginUrl });
+    if (!ok) return res.status(500).json({ error: 'Failed to send enrollment email' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('enrollEmail error', err);
+    res.status(500).json({ error: 'Unable to send enrollment email' });
+  }
 }
