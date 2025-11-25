@@ -1,6 +1,7 @@
 import { User } from '../models/User.js';
 import { hashPassword } from '../utils/passwords.js';
 import { Vehicle } from '../models/Vehicle.js';
+import { sendEnrollmentEmail } from '../utils/email.js';
 
 export async function listUsers(_req, res) {
   const users = await User.find().select('-passwordHash').sort({ createdAt: -1 });
@@ -42,5 +43,15 @@ export async function createUser(req, res) {
   // Create new user
   const passwordHash = await hashPassword(password);
   const user = await User.create({ name, email: email.toLowerCase(), phone, passwordHash, role });
+  
+  // Send enrollment email (don't await to avoid blocking the response)
+  sendEnrollmentEmail({ 
+    to: user.email, 
+    name: user.name 
+  }).catch(err => {
+    console.error('Failed to send enrollment email:', err);
+    // Don't fail the request if email sending fails
+  });
+  
   res.json({ user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role } });
 }
