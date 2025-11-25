@@ -44,7 +44,7 @@ export async function createUser(req, res) {
   const passwordHash = await hashPassword(password);
   const user = await User.create({ name, email: email.toLowerCase(), phone, passwordHash, role });
   
-  // Send enrollment email (don't await to avoid blocking the response)
+  // Send enrollment email 
   sendEnrollmentEmail({ 
     to: user.email, 
     name: user.name 
