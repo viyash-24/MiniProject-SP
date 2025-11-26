@@ -69,7 +69,7 @@ const useSlotManagement = () => {
       const data = await response.json();
       
       if (response.ok) {
-        // After successful regristration, refresh data
+        // Refresh data after successful registration
         await Promise.all([fetchParkingAreas(), fetchCurrentVehicles()]);
         return data;
       } else {
@@ -94,7 +94,7 @@ const useSlotManagement = () => {
       const data = await response.json();
       
       if (response.ok) {
-        // After successful exit, refresh data
+        // Refresh data after successful exit
         await Promise.all([fetchParkingAreas(), fetchCurrentVehicles()]);
         return data;
       } else {
@@ -118,7 +118,7 @@ const useSlotManagement = () => {
       const data = await response.json();
       
       if (response.ok) {
-        // After successful initialization, refresh parking areas
+        // Refresh parking areas after successful initialization
         await fetchParkingAreas();
         return data;
       } else {
@@ -142,7 +142,7 @@ const useSlotManagement = () => {
       const data = await response.json();
       
       if (response.ok) {
-        // After successful recalculation, refresh parking areas
+        // Refresh parking areas after successful recalculation
         await fetchParkingAreas();
         return data;
       } else {
