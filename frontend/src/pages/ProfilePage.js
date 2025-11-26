@@ -17,7 +17,7 @@ const ProfilePage = () => {
     if (!auth.currentUser) return toast.error('No authenticated user');
     setLoading(true);
     try {
-      // Update displayName or photoURL
+      // update profile info
       if ((displayName !== user.displayName) || (photoUrl !== user.photoURL)) {
         await updateProfile(auth.currentUser, { displayName: displayName || null, photoURL: photoUrl || null });
       }
