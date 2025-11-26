@@ -1,7 +1,21 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { auth, googleProvider, db } from '../firebase';
-import { onAuthStateChanged, signInWithPopup, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, getAdditionalUserInfo } from 'firebase/auth';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { auth, googleProvider, db } from "../firebase";
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile,
+  getAdditionalUserInfo,
+} from "firebase/auth";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 
 const AuthContext = createContext({ user: null, isAdmin: false });
 
@@ -11,7 +25,7 @@ export const AuthProvider = ({ children }) => {
   const [authLoading, setAuthLoading] = useState(true);
   const [adminLoading, setAdminLoading] = useState(true);
 
-  // Listen to Firebase Auth
+  // Listen to the Firebase Auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -26,7 +40,7 @@ export const AuthProvider = ({ children }) => {
     setAdminLoading(true);
 
     const email = user?.email?.toLowerCase();
-    const hardcodedAdmin = email === 'admin@gmail.com';
+    const hardcodedAdmin = email === "admin@gmail.com";
 
     if (!email) {
       setAdminLoading(false);
@@ -40,16 +54,20 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
-    const ref = doc(db, 'admins', email);
-    const unsub = onSnapshot(ref, (snap) => {
-      const exists = snap.exists();
-      const data = exists ? snap.data() : {};
-      setIsAdmin(!!exists && (data.active ?? true));
-      setAdminLoading(false);
-    }, () => {
-      setIsAdmin(false);
-      setAdminLoading(false);
-    });
+    const ref = doc(db, "admins", email);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        const exists = snap.exists();
+        const data = exists ? snap.data() : {};
+        setIsAdmin(!!exists && (data.active ?? true));
+        setAdminLoading(false);
+      },
+      () => {
+        setIsAdmin(false);
+        setAdminLoading(false);
+      }
+    );
 
     return () => unsub();
   }, [user?.email]);
@@ -57,40 +75,49 @@ export const AuthProvider = ({ children }) => {
   const googlePromiseRef = useRef(null);
   const loginWithGoogle = async () => {
     if (googlePromiseRef.current) return googlePromiseRef.current;
-    const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+    const API_URL =
+      process.env.REACT_APP_API_URL || "http://localhost:5000/api";
     const p = (async () => {
       const result = await signInWithPopup(auth, googleProvider);
       const u = result?.user;
       const info = getAdditionalUserInfo(result);
-      const email = (u?.email || u?.providerData?.[0]?.email || '').toLowerCase().trim();
-      const name = u?.displayName || (email ? email.split('@')[0] : 'User');
+      const email = (u?.email || u?.providerData?.[0]?.email || "")
+        .toLowerCase()
+        .trim();
+      const name = u?.displayName || (email ? email.split("@")[0] : "User");
 
       if (info?.isNewUser && u?.uid && email) {
-        await setDoc(doc(db, 'users', u.uid), {
-          uid: u.uid,
-          name: name || '',
-          email,
-          phone: '',
-          createdAt: new Date().toISOString(),
-        }, { merge: true });
+        await setDoc(
+          doc(db, "users", u.uid),
+          {
+            uid: u.uid,
+            name: name || "",
+            email,
+            phone: "",
+            createdAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
 
         try {
           await fetch(`${API_URL}/auth/enroll-email`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ to: email, name }),
           });
         } catch (_) {}
       }
       return u;
     })();
-    googlePromiseRef.current = p.finally(() => { googlePromiseRef.current = null; });
+    googlePromiseRef.current = p.finally(() => {
+      googlePromiseRef.current = null;
+    });
     return p;
   };
 
   // Register using email/password and create a Firestore user document
   const registerWithEmail = async (name, email, password, phone) => {
-    const e = (email || '').toLowerCase().trim();
+    const e = (email || "").toLowerCase().trim();
     const userCred = await createUserWithEmailAndPassword(auth, e, password);
     const u = userCred.user;
     // set display name on user profile
@@ -101,25 +128,29 @@ export const AuthProvider = ({ children }) => {
     }
 
     // Create a basic user document in Firestore
-    await setDoc(doc(db, 'users', u.uid), {
+    await setDoc(doc(db, "users", u.uid), {
       uid: u.uid,
-      name: name || '',
+      name: name || "",
       email: e,
-      phone: phone || '',
+      phone: phone || "",
       createdAt: new Date().toISOString(),
     });
   };
 
   // Email/password login with special-case support for admin@gmail.com/admin
   const loginWithEmailPassword = async (email, password) => {
-    const e = (email || '').toLowerCase().trim();
-    const p = password || '';
+    const e = (email || "").toLowerCase().trim();
+    const p = password || "";
 
     try {
       await signInWithEmailAndPassword(auth, e, p);
     } catch (err) {
       // If the admin hardcoded user doesn't exist yet, create it on the fly
-      if (e === 'admin@gmail.com' && p === 'admin123' && err?.code === 'auth/user-not-found') {
+      if (
+        e === "admin@gmail.com" &&
+        p === "admin123" &&
+        err?.code === "auth/user-not-found"
+      ) {
         await createUserWithEmailAndPassword(auth, e, p);
         return;
       }
@@ -132,12 +163,16 @@ export const AuthProvider = ({ children }) => {
   };
 
   const loading = authLoading || adminLoading;
-  const value = { user, isAdmin, loading, loginWithGoogle, loginWithEmailPassword, registerWithEmail, logout };
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    isAdmin,
+    loading,
+    loginWithGoogle,
+    loginWithEmailPassword,
+    registerWithEmail,
+    logout,
+  };
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);
