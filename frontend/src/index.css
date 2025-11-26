@@ -20,7 +20,7 @@ code {
 /* index.css */
 :root {
   --color-background: white;
-  --color-text: darkblue;
+  --color-text: black;
 }
 .dark-mode {
   --color-background: #121212;
