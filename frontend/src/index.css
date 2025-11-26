@@ -19,7 +19,7 @@ code {
 }
 /* index.css */
 :root {
-  --color-background: white;
+  --color-background: lightgray;
   --color-text: black;
 }
 .dark-mode {
