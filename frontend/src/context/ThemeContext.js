@@ -1,51 +1,28 @@
-// src/context/ThemeContext.js
-import React, { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect } from "react";
 
-// Firstly, Create the Context
-const ThemeContext = createContext();
+export const ThemeContext = createContext();
 
-// A custom hook to easily access the theme context
-export const useTheme = () => {
-  return useContext(ThemeContext);
-};
-
-// After create the context, Create the Provider Component
+// ThemeProvider component to manage light/dark theme
 export const ThemeProvider = ({ children }) => {
-  // Initialize from localStorage, otherwise detect system preference
   const [theme, setTheme] = useState(() => {
-    const stored = localStorage.getItem("theme");
-    if (stored === "light" || stored === "dark") return stored;
-    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    return prefersDark ? "dark" : "light";
+    return localStorage.getItem("theme") || "light";
   });
 
-  // Finally, Effect to apply the theme class to the document body
   useEffect(() => {
-    const root = window.document.documentElement;
-
-    // Remove both classes first to ensure a clean update
-    root.classList.remove("light-mode", "dark-mode");
-
-    // Add the current theme class
-    root.classList.add(`${theme}-mode`);
-
-    // Also update localStorage
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
     localStorage.setItem("theme", theme);
-  }, [theme]); // Re-run effect whenever 'theme' state changes
+  }, [theme]);
 
-  // Function to toggle the theme
   const toggleTheme = () => {
-    setTheme((currentTheme) => (currentTheme === "light" ? "dark" : "light"));
-  };
-
-  // The value provided to components that consume the context
-  const contextValue = {
-    theme,
-    toggleTheme,
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
 
   return (
-    <ThemeContext.Provider value={contextValue}>
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
       {children}
     </ThemeContext.Provider>
   );
