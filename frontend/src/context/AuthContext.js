@@ -16,7 +16,7 @@ import {
   getAdditionalUserInfo,
 } from "firebase/auth";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
-
+// AuthContext to provide user and admin state
 const AuthContext = createContext({ user: null, isAdmin: false });
 
 export const AuthProvider = ({ children }) => {
