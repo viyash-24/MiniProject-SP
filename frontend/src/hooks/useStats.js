@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 
+// Custom hook to fetch and manage dashboard statistics
 const useStats = () => {
   const [stats, setStats] = useState({
     totalParkingAreas: 0,
@@ -14,7 +15,7 @@ const useStats = () => {
   const [error, setError] = useState(null);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
+// Fetch statistics on component mount
   useEffect(() => {
     const fetchStats = async () => {
       try {
