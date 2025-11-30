@@ -920,6 +920,7 @@ const AdminDashboardPage = () => {
                   <thead>
                     <tr className="text-left text-gray-600 border-b border-gray-100 bg-gray-50/80 dark:text-slate-300 dark:border-slate-800 dark:bg-slate-900/80">
                       <th className="py-3 pr-4">Plate</th>
+                      <th className="py-3 pr-4">Vehicle Type</th>
                       <th className="py-3 pr-4">User</th>
                       <th className="py-3 pr-4">Phone</th>
                       <th className="py-3 pr-4 text-center">Parking Area</th>
@@ -935,6 +936,7 @@ const AdminDashboardPage = () => {
                         className="border-b border-gray-100 hover:bg-gray-50 dark:border-slate-800 dark:hover:bg-slate-800/60"
                       >
                         <td className="py-3 pr-4 whitespace-nowrap text-gray-900 dark:text-slate-50">{v.plate}</td>
+                        <td className="py-3 pr-4 text-gray-700 dark:text-slate-300">{v.vehicleType || "-"}</td>
                         <td className="py-3 pr-4 text-gray-900 dark:text-slate-100">
                           {v.userName || v.userEmail || "-"}
                         </td>
