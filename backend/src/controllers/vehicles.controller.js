@@ -1,6 +1,7 @@
 import { Vehicle } from '../models/Vehicle.js';
 import { Slot } from '../models/Slot.js';
 import { Payment } from '../models/Payment.js';
+import { ParkingCharge } from '../models/ParkingCharge.js';
 import { ParkingArea } from '../models/ParkingArea.js';
 import { nanoid } from 'nanoid';
 import nodemailer from 'nodemailer';
@@ -124,9 +125,40 @@ export async function searchVehicles(req, res) {
 
 export async function markPaid(req, res) {
   const { id } = req.params;
-  const { amount = 50, method = 'Cash' } = req.body;
+  const { method = 'Cash' } = req.body;
   const v = await Vehicle.findById(id);
   if (!v) return res.status(404).json({ error: 'Vehicle not found' });
+
+  // Resolve amount from active parking charges based on vehicle type
+  let amount = null;
+
+try {
+  if (v.vehicleType) {
+    const targetType = String(v.vehicleType).trim().toLowerCase();
+
+    const charge = await ParkingCharge.findOne({
+      vehicleType: new RegExp(`^${targetType}$`, "i"),
+      isActive: true
+    }).lean();
+
+    if (!charge) {
+      return res.status(400).json({
+        error: `No parking charge defined for vehicle type: ${v.vehicleType}. Admin must set a price before payment.`
+      });
+    }
+
+    amount = Number(charge.amount);
+  }
+} catch (err) {
+  console.error("Charge load error:", err?.message || err);
+  return res.status(500).json({ error: "Failed to resolve parking charge" });
+}
+
+if (!amount || amount <= 0) {
+  return res.status(400).json({
+    error: `Invalid parking charge amount for ${v.vehicleType}. Admin must set a valid price.`
+  });
+}
   v.paymentStatus = 'Paid';
   v.status = 'Paid';
   await v.save();

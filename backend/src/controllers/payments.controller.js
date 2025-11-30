@@ -26,7 +26,6 @@ async function sendEmail(details) {
   try {
     await sendPaymentReceiptEmail(details);
   } catch (err) {
-    // swallow email errors to not break payment flow
     console.error('Email send failed:', err?.message || err);
   }
 }
@@ -47,7 +46,6 @@ export async function createPaymentIntent(req, res) {
   }
 
   try {
-    // Use test vehicle data if it's the test ID to skip database lookup
     let vehicleData;
     if (vehicleId === 'test') {
       vehicleData = {
@@ -57,8 +55,10 @@ export async function createPaymentIntent(req, res) {
         userEmail: 'test@example.com'
       };
     } else {
-      // Fast vehicle lookup without population
-      const vehicle = await Vehicle.findById(vehicleId).select('plate vehicleType userEmail userName userPhone').lean();
+      const vehicle = await Vehicle.findById(vehicleId)
+        .select('plate vehicleType userEmail userName userPhone')
+        .lean();
+
       if (!vehicle) {
         return res.status(404).json({ error: 'Vehicle not found' });
       }
@@ -67,25 +67,44 @@ export async function createPaymentIntent(req, res) {
 
     console.log(' Vehicle found:', vehicleData.plate);
 
-    // Resolve amount from active parking charge, with a safe default
-    let amount = 50; // default fallback
-    try {
-      const charge = await ParkingCharge.findOne({
-        vehicleType: vehicleData.vehicleType,
-        isActive: true,
-      }).lean();
-      if (charge?.amount && charge.amount > 0) {
-        amount = charge.amount;
-      }
-    } catch (err) {
-      console.error(' Failed to load parking charge for vehicle type:', err?.message || err);
+    // -----------------------------
+    // FIXED CHARGE RESOLVER
+    // -----------------------------
+   let amount = null;
+
+try {
+  if (vehicleData.vehicleType) {
+    const targetType = String(vehicleData.vehicleType).trim().toLowerCase();
+
+    const charge = await ParkingCharge.findOne({
+      vehicleType: new RegExp(`^${targetType}$`, "i"),
+      isActive: true
+    }).lean();
+
+    if (!charge) {
+      return res.status(400).json({
+        error: `No parking charge defined for vehicle type: ${vehicleData.vehicleType}. Admin must set a price.`
+      });
     }
 
-    const currency = 'inr';
+    amount = Number(charge.amount);
+  }
+} catch (err) {
+  console.error("Charge load error:", err?.message || err);
+  return res.status(500).json({ error: "Failed to resolve parking charge" });
+}
 
-    // Create payment intent immediately without complex calculations
+if (!amount || amount <= 0) {
+  return res.status(400).json({
+    error: `Invalid parking charge amount for ${vehicleData.vehicleType}. Admin must set a valid price.`
+  });
+}
+
+
+    const currency = 'lkr';
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: amount * 100, // Convert to paise
+      amount: amount * 100,
       currency: currency,
       metadata: {
         vehicleId: String(vehicleData._id),
@@ -112,23 +131,24 @@ export async function createPaymentIntent(req, res) {
 
 export async function confirmStripePayment(req, res) {
   const { paymentIntentId, vehicleId } = req.body;
-  if (!paymentIntentId || !vehicleId) return res.status(400).json({ error: 'paymentIntentId and vehicleId are required' });
+  if (!paymentIntentId || !vehicleId)
+    return res.status(400).json({ error: 'paymentIntentId and vehicleId are required' });
 
   try {
     const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
     if (!intent) return res.status(404).json({ error: 'PaymentIntent not found' });
-    if (intent.status !== 'succeeded') return res.status(400).json({ error: `PaymentIntent not succeeded: ${intent.status}` });
+    if (intent.status !== 'succeeded')
+      return res.status(400).json({ error: `PaymentIntent not succeeded: ${intent.status}` });
 
     const v = await Vehicle.findById(vehicleId);
     if (!v) return res.status(404).json({ error: 'Vehicle not found' });
 
-    // Mark vehicle paid
     v.paymentStatus = 'Paid';
     v.status = 'Paid';
     await v.save();
 
-    // Record payment details
     const amount = (intent.amount_received ?? intent.amount) / 100;
+
     const p = await Payment.create({
       vehicleId: v._id,
       userId: v.userId || undefined,
@@ -144,7 +164,6 @@ export async function confirmStripePayment(req, res) {
       paymentDate: new Date(),
     });
 
-    // Send receipt via email if available
     if (v.userEmail) {
       await sendEmail({
         to: v.userEmail,
