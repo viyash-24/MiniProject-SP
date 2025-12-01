@@ -22,7 +22,7 @@ const parkingChargeSchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    default: 'INR',
+    default: 'LKR',
   },
   duration: {
     type: String,

@@ -35,7 +35,7 @@ const AdminDashboardPage = () => {
   const [q, setQ] = useState("");
   const [vehicles, setVehicles] = useState([]);
   const [usersList, setUsersList] = useState([]);
-  const [slots, setSlots] = useState([]);
+ // const [slots, setSlots] = useState([]);
   const [payments, setPayments] = useState([]);
   const [parkingAreas, setParkingAreas] = useState([]);
   const [parkingCharges, setParkingCharges] = useState([]);
@@ -70,8 +70,6 @@ const AdminDashboardPage = () => {
     "Car",
     "Bike",
     "Van",
-    "Bus",
-    "Truck",
     "Auto",
     "SUV",
     "Scooter",
@@ -81,7 +79,6 @@ const AdminDashboardPage = () => {
   const tabs = [
     { id: "vehicles", name: "Vehicles" },
     { id: "users", name: "Users" },
-    { id: "slots", name: "Slots" },
     { id: "payments", name: "Payments" },
     { id: "parking-areas", name: "Parking Areas" },
     { id: "parking-charges", name: "Parking Charges" },
@@ -117,7 +114,7 @@ const AdminDashboardPage = () => {
 
         setVehicles((await vehiclesRes.json()).vehicles || []);
         setUsersList((await usersRes.json()).users || []);
-        setSlots((await slotsRes.json()).slots || []);
+       // setSlots((await slotsRes.json()).slots || []);
         setPayments((await paymentsRes.json()).payments || []);
         setParkingAreas((await parkingAreasRes.json()).parkingAreas || []);
         setParkingCharges((await parkingChargesRes.json()).charges || []);
@@ -374,7 +371,7 @@ const AdminDashboardPage = () => {
     });
   };
 
-  const updateSlot = async (s, next) => {
+  {/*const updateSlot = async (s, next) => {
     try {
       const res = await fetch(`${API_URL}/slots/${s._id}`, {
         method: "PUT",
@@ -414,6 +411,7 @@ const AdminDashboardPage = () => {
       error: (err) => err.message || "An error occurred.",
     });
   };
+*/}
 
   const resetParkingAreaForm = () =>
     setNewParkingArea({
@@ -421,7 +419,7 @@ const AdminDashboardPage = () => {
       address: "",
       latitude: "",
       longitude: "",
-      slotAmount: 20,
+      slotAmount: "",
       photo: "",
     });
 
@@ -717,7 +715,7 @@ const AdminDashboardPage = () => {
             />
             <StatsCard
               title="Total Revenue"
-              value={`₹${stats.totalRevenue.toLocaleString()}`}
+              value={`RS. ${stats.totalRevenue.toLocaleString()}`}
               loading={statsLoading}
               color="orange"
               icon={
@@ -739,7 +737,7 @@ const AdminDashboardPage = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Management Console</h1>
             <p className="text-gray-600 dark:text-slate-400">
-              Manage users, vehicles, slots, and payments.
+              Manage Users, Vehicles, ParkingArea, ParkingCharges and payments.
             </p>
           </div>
           <div className="flex gap-2">
@@ -755,13 +753,7 @@ const AdminDashboardPage = () => {
                 Add User & Vehicle
               </span>
             </button>
-            <Link
-              to="/admin/parking-areas"
-              state={{ openForm: true }}
-              className="px-4 py-2 rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 text-center transition-colors"
-            >
-              Manage Parking Areas
-            </Link>
+           
           </div>
         </div>
 
@@ -779,7 +771,7 @@ const AdminDashboardPage = () => {
                 {name}
                 {id === "vehicles" && `(${vehicles.length})`}
                 {id === "users" && `(${usersList.length})`}
-                {id === "slots" && `(${slots.length})`}
+                {/*{id === "slots" && `(${slots.length})`}*/}
                 {id === "payments" && `(${payments.length})`}
                 {id === "parking-areas" && `(${parkingAreas.length})`}
                 {id === "parking-charges" && `(${parkingCharges.length})`}
@@ -824,7 +816,7 @@ const AdminDashboardPage = () => {
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Vehicle Details</h3>
                   <input
-                    placeholder="Plate (e.g. TN-09-AB-1234)"
+                    placeholder="Plate (e.g. ABC-2234)"
                     required
                     value={newVehicle.plate}
                     onChange={(e) =>
@@ -1027,7 +1019,7 @@ const AdminDashboardPage = () => {
             </div>
           )}
 
-          {tab === "slots" && (
+         {/* {tab === "slots" && (
             <div className="p-4">
               <form
                 onSubmit={createSlot}
@@ -1123,6 +1115,7 @@ const AdminDashboardPage = () => {
               </div>
             </div>
           )}
+          */}
 
           {tab === "payments" && (
             <div className="p-4">
@@ -1180,7 +1173,7 @@ const AdminDashboardPage = () => {
                         </td>
                         <td className="py-3 px-4">
                           <div className="font-semibold text-green-600 dark:text-green-400">
-                            ₹{p.amount || 0}
+                            RS.{p.amount || 0}
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -1524,7 +1517,7 @@ const AdminDashboardPage = () => {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
-                        Amount (₹)
+                        Amount (RS)
                       </label>
                       <input
                         type="number"
@@ -1628,7 +1621,7 @@ const AdminDashboardPage = () => {
                       <div className="flex items-center justify-between">
                         <span>Amount</span>
                         <span className="text-lg font-semibold text-gray-900 dark:text-slate-50">
-                          ₹{charge.amount}
+                          RS.{charge.amount}
                         </span>
                       </div>
                       <div className="mt-1 flex items-center justify-between">
