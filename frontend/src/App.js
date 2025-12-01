@@ -14,7 +14,7 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import ProfilePage from './pages/ProfilePage';
 import ParkingAreasPage from './pages/ParkingAreasPage';
 import ParkingAreaDetailsPage from './pages/ParkingAreaDetailsPage';
-import AdminSlotManagementPage from './pages/AdminSlotManagementPage';
+//import AdminSlotManagementPage from './pages/AdminSlotManagementPage';
 import AboutUsPage from './pages/AboutUsPage';
 import ContactUsPage from './pages/ContactUsPage';
 import FAQsPage from './pages/FAQsPage';
@@ -130,11 +130,13 @@ const AnimatedRoutes = ({ AdminRedirect }) => {
               <ParkingAreaDetailsPage />
             </ProtectedRoute>
           } />
+          {/*
           <Route path="/admin/slot-management" element={
             <ProtectedRoute requireAdmin>
               <AdminSlotManagementPage />
             </ProtectedRoute>
           } />
+        */}
           <Route path="/parking/:id" element={
             <ProtectedRoute disallowAdmin>
               <ParkingAreaDetailsPage />
