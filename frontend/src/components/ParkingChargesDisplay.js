@@ -5,8 +5,7 @@ const vehicleIconMap = {
   bike: '🏍️',
   scooter: '🛵',
   auto: '🛺',
-  bus: '🚌',
-  truck: '🚚',
+  bus: '🚌',  
   van: '🚐',
   suv: '🚙',
 };
@@ -130,7 +129,7 @@ const ParkingChargesDisplay = ({ compact = false, showHeading = true }) => {
                 </span>
               </div>
               <div className="text-3xl font-bold text-primary mb-1">
-                ₹{charge.amount}
+                RS{charge.amount}
               </div>
               <div className="text-sm text-gray-600">
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
