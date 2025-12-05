@@ -13,6 +13,7 @@ const ParkingAreaDetailsPage = () => {
   const [availableSlots, setAvailableSlots] = useState(0);
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const BASE_URL = API_URL.replace('/api', '');
 
   const getAuthHeader = () => {
     const headers = { 'Content-Type': 'application/json' };
@@ -99,17 +100,26 @@ const ParkingAreaDetailsPage = () => {
         <div className="space-y-6">
           {/* Photo */}
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            {parkingArea.photo ? (
-              <img 
-                src={parkingArea.photo} 
-                alt={parkingArea.name} 
-                className="w-full h-64 object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-            ) : null}
+            {(() => {
+              const rawPhoto = parkingArea.photo || '';
+              if (!rawPhoto) return null;
+
+              const finalSrc = rawPhoto.startsWith('http')
+                ? rawPhoto
+                : `${BASE_URL}${rawPhoto.startsWith('/') ? rawPhoto : `/uploads/${rawPhoto}`}`;
+
+              return (
+                <img 
+                  src={finalSrc} 
+                  alt={parkingArea.name} 
+                  className="w-full h-64 object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              );
+            })()}
             <div 
               className={`h-64 flex items-center justify-center bg-gray-100 ${parkingArea.photo ? 'hidden' : 'flex'}`}
               style={{ display: parkingArea.photo ? 'none' : 'flex' }}
