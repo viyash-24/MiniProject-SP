@@ -17,7 +17,7 @@ const ParkingAreaDetailsPage = () => {
 
   const getAuthHeader = () => {
     const headers = { 'Content-Type': 'application/json' };
-    // Include admin email bypass header for admin panel requests
+    
     if (user?.email) {
       headers['x-admin-email'] = (user.email || '').toLowerCase();
     } else if (user?.email) {
@@ -66,7 +66,7 @@ const ParkingAreaDetailsPage = () => {
       } catch (error) {
         console.error('Error fetching parking area details:', error);
         toast.error(error.message || 'Failed to fetch parking area details');
-        navigate('/dashboard'); // Redirect to dashboard instead of admin
+        navigate('/dashboard'); 
       } finally {
         setIsLoading(false);
       }
@@ -96,9 +96,9 @@ const ParkingAreaDetailsPage = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Left Column - Main Info */}
+        
         <div className="space-y-6">
-          {/* Photo */}
+          
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
             {(() => {
               const rawPhoto = parkingArea.photo || '';
@@ -143,7 +143,7 @@ const ParkingAreaDetailsPage = () => {
             </div>
           </div>
 
-          {/* Basic Information */}
+          
           <div className="bg-white shadow-md rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Parking Information</h2>
             <div className="space-y-3">
@@ -179,7 +179,7 @@ const ParkingAreaDetailsPage = () => {
           </div>
         </div>
 
-        {/* Right Column - Map */}
+       
         <div className="space-y-6">
           <div className="bg-white shadow-md rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Location</h2>
@@ -191,11 +191,11 @@ const ParkingAreaDetailsPage = () => {
             <MapPicker 
               latitude={parkingArea.location.latitude}
               longitude={parkingArea.location.longitude}
-              onLocationChange={() => {}} // Read-only for details page
+              onLocationChange={() => {}} 
             />
           </div>
 
-          {/* Quick Actions */}
+          
           <div className="bg-white shadow-md rounded-lg p-6">
             <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
             <div className="space-y-3">

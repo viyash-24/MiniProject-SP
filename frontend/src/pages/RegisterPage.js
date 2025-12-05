@@ -54,7 +54,7 @@ const RegisterPage = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-5xl bg-card rounded-2xl shadow-xl border border-border overflow-hidden flex flex-col md:flex-row"
       >
-        {/* Left Side - Form */}
+        
         <div className="w-full md:w-1/2 p-8 lg:p-12">
           <div className="text-left mb-8">
             <h2 className="text-3xl font-bold tracking-tight text-foreground">Create account</h2>
@@ -193,7 +193,7 @@ const RegisterPage = () => {
           </div>
         </div>
 
-        {/* Right Side - Image */}
+      
         <div className="hidden md:block w-1/2 relative bg-muted">
           <img 
             src="https://images.unsplash.com/photo-1590674899505-1c5c41959359?q=80&w=1600&auto=format&fit=crop" 

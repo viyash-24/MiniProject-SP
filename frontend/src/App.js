@@ -27,7 +27,7 @@ const NavigationHandler = () => {
   const location = useLocation();
   const { setLoading } = useLoading();
   React.useEffect(() => {
-    // stop the loading indicator when route changes
+    
     setLoading(false);
    
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -36,7 +36,7 @@ const NavigationHandler = () => {
 };
 
 function App() {
-  // Wrapper that redirects admins away from user pages while leaving others unaffected
+ 
   const AdminRedirect = ({ children }) => {
     const { isAdmin } = useAuth();
     if (isAdmin) return <Navigate to="/admin" replace />;
