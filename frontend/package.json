@@ -24,7 +24,9 @@
     "react-scripts": "5.0.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.4.0",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "@tailwindcss/typography": "^0.5.19",
+    "tailwindcss-animate": "^1.0.7"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -49,13 +51,5 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.12",
-    "@tailwindcss/typography": "^0.5.19",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17",
-    "tailwindcss-animate": "^1.0.7"
   }
 }

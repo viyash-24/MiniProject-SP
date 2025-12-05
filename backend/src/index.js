@@ -21,6 +21,11 @@ import slotManagementRoutes from './routes/slotManagement.routes.js';
 import parkingChargeRoutes from './routes/parkingCharges.routes.js';
 import { errorHandler } from './middleware/error.js';
 import { seedAdmin } from './utils/seed.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const httpServer = createServer(app);
@@ -72,6 +77,9 @@ app.use('/api/public/parking-areas', publicParkingAreaRoutes); // Public route f
 app.use('/api/stats', statsRoutes);
 app.use('/api/slot-management', slotManagementRoutes);
 app.use('/api/parking-charges', parkingChargeRoutes);
+
+// Serve uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Error handler
 app.use(errorHandler);

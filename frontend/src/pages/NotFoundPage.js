@@ -1,24 +1,32 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { AlertCircle, Home } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 const NotFoundPage = () => {
   return (
-    <div className="min-h-[70vh] bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4 page-fade-in">
-      <div className="max-w-md w-full bg-slate-900/70 border border-slate-700 rounded-2xl shadow-2xl p-8 text-center text-slate-100 card-elevated">
-        <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-red-500/10 border border-red-500/40 mb-4">
-          <span className="text-2xl font-semibold text-red-400">404</span>
+    <div className="min-h-[70vh] flex items-center justify-center px-4 bg-background">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+        className="max-w-md w-full bg-card border border-border rounded-2xl shadow-xl p-8 text-center"
+      >
+        <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-destructive/10 text-destructive mb-6">
+          <AlertCircle className="h-8 w-8" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Page not found</h1>
-        <p className="text-sm sm:text-base text-slate-300 mb-6">
+        <h1 className="text-3xl font-bold mb-2 text-foreground">Page not found</h1>
+        <p className="text-muted-foreground mb-8">
           The page you are looking for doesn't exist or has been moved.
         </p>
-        <Link
-          to="/"
-          className="inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-primary text-white text-sm font-medium shadow-lg shadow-blue-500/30 hover:bg-primary-dark transition-colors btn-soft"
-        >
-          Go back home
-        </Link>
-      </div>
+        <Button asChild className="w-full sm:w-auto">
+          <Link to="/">
+            <Home className="mr-2 h-4 w-4" />
+            Go back home
+          </Link>
+        </Button>
+      </motion.div>
     </div>
   );
 };
