@@ -1,6 +1,14 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useContext } from "react";
 
 export const ThemeContext = createContext();
+
+export const useTheme = () => {
+  const context = useContext(ThemeContext);
+  if (!context) {
+    throw new Error("useTheme must be used within a ThemeProvider");
+  }
+  return context;
+};
 
 // ThemeProvider component to manage light/dark theme
 export const ThemeProvider = ({ children }) => {
@@ -10,9 +18,9 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     if (theme === "dark") {
-      document.documentElement.classList.add("dark");
+      document.documentElement.classList.add("dark-mode");
     } else {
-      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.remove("dark-mode");
     }
     localStorage.setItem("theme", theme);
   }, [theme]);

@@ -2,6 +2,9 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { Search, MapPin, Navigation, Car, AlertCircle, Loader2, Filter } from 'lucide-react';
+import { Button } from '../components/ui/button';
 
 function DashboardPage() {
   const { user } = useAuth();
@@ -10,120 +13,98 @@ function DashboardPage() {
   const [error, setError] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(null);
-  const [pagination, setPagination] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortBy, setSortBy] = useState('distance'); // distance, slots
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const BASE_URL = API_URL.replace('/api', '');
 
-  const fetchParkingAreas = useCallback(async (page = 1, limit = 10) => {
+  const fetchParkingAreas = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const response = await fetch(
-        `${API_URL}/public/parking-areas?page=${page}&limit=${limit}`, 
-        {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      
+      const response = await fetch(`${API_URL}/public/parking-areas?limit=100`);
       const data = await response.json();
       
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Failed to fetch parking areas');
-      }
-      
-      // Update state with paginated data
+      if (!response.ok || !data.success) throw new Error(data.error || 'Failed to fetch');
       setParkingAreas(data.data || []);
-      
-      // Store pagination info if needed
-      if (data.pagination) {
-        setPagination({
-          currentPage: data.pagination.page,
-          totalPages: data.pagination.totalPages,
-          totalItems: data.pagination.total,
-          hasNextPage: data.pagination.hasNextPage,
-          hasPreviousPage: data.pagination.hasPreviousPage
-        });
-      }
-      
     } catch (error) {
-      console.error('Error fetching parking areas:', error);
-      setError(error.message || 'Failed to load parking areas. Please try again.');
-      setParkingAreas([]);
-      toast.error(error.message || 'Failed to load parking areas. Please try again later.');
+      console.error('Error:', error);
+      setError('Failed to load parking areas.');
+      toast.error('Failed to load parking areas.');
     } finally {
       setLoading(false);
     }
   }, [API_URL]);
 
   useEffect(() => {
-    // Get user's current location
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          });
-        },
-        (error) => {
-          console.error('Error getting location:', error);
-          setLocationError('Unable to retrieve your location. Distance information will not be available.');
-        }
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err) => console.error('Location error:', err)
       );
-    } else {
-      setLocationError('Geolocation is not supported by your browser');
     }
-
-    // Fetch parking areas
     fetchParkingAreas();
   }, [fetchParkingAreas]);
 
-  // Calculate distance between two points in km
   const calculateDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
-    
-    const R = 6371; // Earth's radius in km
+    const R = 6371; 
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return (R * c).toFixed(1);
   };
 
-  // Sort parking areas by distance if location is available
   const sortedParkingAreas = useMemo(() => {
-    if (!userLocation) return parkingAreas;
+    let areas = [...parkingAreas];
     
-    return [...parkingAreas].sort((a, b) => {
-      const distA = calculateDistance(
-        userLocation.lat, 
-        userLocation.lng, 
-        a.location?.latitude, 
-        a.location?.longitude
+    // Filter
+    if (searchTerm) {
+      areas = areas.filter(area => 
+        area.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        area.address.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      const distB = calculateDistance(
-        userLocation.lat, 
-        userLocation.lng, 
-        b.location?.latitude, 
-        b.location?.longitude
-      );
-      return (distA || Infinity) - (distB || Infinity);
+    }
+
+    // Add distance
+    if (userLocation) {
+      areas = areas.map(area => ({
+        ...area,
+        distance: calculateDistance(
+          userLocation.lat,
+          userLocation.lng,
+          area.location?.coordinates?.[1] || area.latitude,
+          area.location?.coordinates?.[0] || area.longitude
+        )
+      }));
+    }
+
+    // Sort
+    areas.sort((a, b) => {
+      if (sortBy === 'distance' && userLocation) {
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return parseFloat(a.distance) - parseFloat(b.distance);
+      }
+      if (sortBy === 'slots') {
+        const slotsA = a.availableSlots !== undefined ? a.availableSlots : a.totalSlots;
+        const slotsB = b.availableSlots !== undefined ? b.availableSlots : b.totalSlots;
+        return slotsB - slotsA; // Most slots first
+      }
+      return 0;
     });
-  }, [parkingAreas, userLocation]);
+    
+    return areas;
+  }, [parkingAreas, userLocation, searchTerm, sortBy]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-950">
-        <div className="text-center page-fade-in">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600 dark:text-slate-300">Loading parking areas...</p>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="text-muted-foreground">Finding parking spots nearby...</p>
         </div>
       </div>
     );
@@ -131,180 +112,165 @@ function DashboardPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-4 page-fade-in">
-        <div className="bg-red-50 dark:bg-red-950/40 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-300 px-4 py-3 rounded relative" role="alert">
-          <strong className="font-bold">Error: </strong>
-          <span className="block sm:inline">{error}</span>
-          <button 
-            onClick={fetchParkingAreas}
-            className="ml-4 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded btn-soft"
-          >
-            Retry
-          </button>
+      <div className="flex items-center justify-center min-h-screen bg-background p-4">
+        <div className="max-w-md w-full bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center">
+          <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-destructive mb-2">Something went wrong</h3>
+          <p className="text-muted-foreground mb-6">{error}</p>
+          <Button onClick={fetchParkingAreas} variant="outline">Try Again</Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 bg-slate-50 dark:bg-slate-950 page-fade-in">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-slate-50">Available Parking Areas</h1>
-        {user?.role === 'admin' && (
-          <Link
-            to="/admin/parking-areas"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 btn-soft"
-          >
-            Manage Parking Areas
-          </Link>
-        )}
-      </div>
-
-      {locationError && (
-        <div className="mb-4 p-4 bg-yellow-50 dark:bg-yellow-950/40 border-l-4 border-yellow-500 text-yellow-700 dark:text-yellow-200">
-          <p>{locationError}</p>
-        </div>
-      )}
-      
-      {parkingAreas.length === 0 ? (
-        <div className="text-center py-12">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-slate-50">No parking areas available</h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-            There are currently no parking areas listed. Please check back later.
-          </p>
+    <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Find Parking</h1>
+            <p className="text-muted-foreground">Discover available spots near you.</p>
+          </div>
           {user?.role === 'admin' && (
-            <div className="mt-6">
-              <Link
-                to="/admin/parking-areas"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-full shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 btn-soft"
-              >
-                Add New Parking Area
-              </Link>
-            </div>
+            <Button asChild>
+              <Link to="/admin/parking-areas">Manage Areas</Link>
+            </Button>
           )}
         </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {sortedParkingAreas.map((area) => {
-            const distance = userLocation && area.location?.latitude && area.location?.longitude
-              ? calculateDistance(
-                  userLocation.lat,
-                  userLocation.lng,
-                  area.location.latitude,
-                  area.location.longitude
-                )
-              : null;
 
-            return (
-              <div key={area._id} className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm border border-gray-100 dark:border-slate-800 rounded-2xl shadow-sm hover:shadow-xl transition-shadow duration-200 flex flex-col card-elevated">
-                {/* Photo Section */}
-                <div className="h-48 bg-gray-100 relative overflow-hidden rounded-t-2xl">
-                  {area.photo ? (
-                    <img 
-                      src={area.photo} 
-                      alt={area.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
+        {/* Search & Filter */}
+        <div className="bg-card border border-border rounded-xl p-4 shadow-sm flex flex-col md:flex-row gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by name or location..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-input bg-background text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant={sortBy === 'distance' ? 'default' : 'outline'}
+              onClick={() => setSortBy('distance')}
+              className="flex-1 md:flex-none"
+              disabled={!userLocation}
+            >
+              <Navigation className="mr-2 h-4 w-4" /> Near Me
+            </Button>
+            <Button 
+              variant={sortBy === 'slots' ? 'default' : 'outline'}
+              onClick={() => setSortBy('slots')}
+              className="flex-1 md:flex-none"
+            >
+              <Filter className="mr-2 h-4 w-4" /> Most Slots
+            </Button>
+          </div>
+        </div>
+
+        {/* Location Warning */}
+        {locationError && (
+          <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4 flex items-start gap-3 text-yellow-600 dark:text-yellow-400">
+            <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
+            <p className="text-sm">{locationError}</p>
+          </div>
+        )}
+
+        {/* Grid */}
+        {sortedParkingAreas.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="bg-muted/30 rounded-full h-20 w-20 flex items-center justify-center mx-auto mb-4">
+              <Car className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-medium text-foreground">No parking areas found</h3>
+            <p className="text-muted-foreground">Try adjusting your search or filters.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {sortedParkingAreas.map((area, index) => (
+              <motion.div
+                key={area._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+                className="group bg-card border border-border rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 flex flex-col"
+              >
+                {/* Image */}
+                <div className="relative h-48 bg-muted overflow-hidden">
+                  {(() => {
+                    const rawPhoto = area.photo || '';
+                    if (!rawPhoto) return null;
+
+                    const finalSrc = rawPhoto.startsWith('http')
+                      ? rawPhoto
+                      : `${BASE_URL}${rawPhoto.startsWith('/') ? rawPhoto : `/uploads/${rawPhoto}`}`;
+
+                    return (
+                      <img 
+                        src={finalSrc} 
+                        alt={area.name}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    );
+                  })()}
                   <div 
-                    className={`absolute inset-0 flex items-center justify-center ${area.photo ? 'hidden' : 'flex'}`}
+                    className={`absolute inset-0 flex items-center justify-center bg-muted ${area.photo ? 'hidden' : 'flex'}`}
                     style={{ display: area.photo ? 'none' : 'flex' }}
                   >
-                    <div className="text-center text-gray-500">
-                      <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      <p className="mt-2 text-sm">No photo available</p>
-                    </div>
+                    <Car className="h-12 w-12 text-muted-foreground/50" />
+                  </div>
+                  
+                  {/* Badge */}
+                  <div className="absolute top-3 right-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium shadow-sm backdrop-blur-md ${
+                      (area.availableSlots || 0) > 5 
+                        ? 'bg-green-500/90 text-white' 
+                        : (area.availableSlots || 0) > 0 
+                          ? 'bg-yellow-500/90 text-white' 
+                          : 'bg-red-500/90 text-white'
+                    }`}>
+                      {area.availableSlots || 0} Slots Left
+                    </span>
                   </div>
                 </div>
 
-                {/* Content Section */}
-                <div className="p-5">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0 bg-blue-500 rounded-md p-3">
-                      <svg
-                        className="h-6 w-6 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 3v4m0 0V3h4m-4 4a4 4 0 004 4m12-4h-4v4m4-4a4 4 0 00-4-4m0 16h4v-4m-4 4a4 4 0 01-4-4m-4 4h4v-4m-4 4a4 4 0 01-4-4m-4 4h4v-4m-4 4a4 4 0 004 4"
-                        />
-                      </svg>
-                    </div>
-                    <div className="ml-5 w-0 flex-1">
-                      <dl>
-                        <dt className="text-sm font-medium text-gray-500 dark:text-slate-400 truncate">
-                          {area.name}
-                        </dt>
-                        <dd className="flex items-baseline">
-                          <div className="text-2xl font-semibold text-gray-900 dark:text-slate-50">
-                            {area.availableSlots || 0} / {area.slotAmount || 0} slots available
-                          </div>
-                        </dd>
-                      </dl>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-gray-50 dark:bg-slate-900/80 px-5 py-3 border-t border-gray-100 dark:border-slate-800 mt-auto">
-                  <div className="text-sm">
-                    <div className="font-medium text-gray-700 dark:text-slate-200">
-                      {area.address}
-                    </div>
-                    {distance !== null && (
-                      <div className="mt-1 text-sm text-gray-500 dark:text-slate-400">
-                        {distance} km away
-                      </div>
+                {/* Content */}
+                <div className="p-5 flex-1 flex flex-col">
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-bold text-lg text-foreground line-clamp-1">{area.name}</h3>
+                    {area.distance && (
+                      <span className="flex items-center text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
+                        <Navigation className="h-3 w-3 mr-1" />
+                        {area.distance} km
+                      </span>
                     )}
-                    <div className="mt-2">
-                      <Link
-                        to={`/parking/${area._id}`}
-                        className="inline-flex items-center gap-1 text-primary hover:text-primary-dark font-medium text-sm"
-                      >
-                        View details →
+                  </div>
+                  
+                  <div className="flex items-start gap-2 text-muted-foreground text-sm mb-4 flex-1">
+                    <MapPin className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                    <span className="line-clamp-2">{area.address}</span>
+                  </div>
+
+                  <div className="pt-4 border-t border-border mt-auto">
+                    <Button asChild className="w-full group-hover:bg-primary/90">
+                      <Link to={`/parking/${area._id}`}>
+                        View Details
                       </Link>
-                    </div>
+                    </Button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              </motion.div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
