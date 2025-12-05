@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { FaUser } from "react-icons/fa";
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, User, LogOut, Menu, X, ChevronDown, MapPin, CreditCard, Shield } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 const Header = () => {
@@ -14,117 +13,121 @@ const Header = () => {
   const dropdownRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setProfileDropdown(false);
       }
     };
-
-    if (profileDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    if (profileDropdown) document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [profileDropdown]);
 
-  const navLinkClass = ({ isActive }) => `px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-    isActive
-      ? 'bg-primary text-white shadow-sm'
-      : 'text-gray-700 hover:text-primary hover:bg-gray-100 dark:text-slate-200 dark:hover:text-primary dark:hover:bg-slate-800'
+  useEffect(() => {
+    setOpen(false);
+  }, [location]);
+
+  const navLinkClass = ({ isActive }) => `text-sm font-medium transition-colors hover:text-primary ${
+    isActive ? 'text-primary' : 'text-muted-foreground'
   }`;
 
-  const adminNavLinkClass = ({ isActive }) => {
-    const isAdminRoute = location.pathname.startsWith('/admin');
-    return `px-3 py-2 rounded-full text-sm font-medium transition-colors ${
-      isAdminRoute
-        ? 'bg-primary text-white shadow-sm'
-        : 'text-gray-700 hover:text-primary hover:bg-gray-100 dark:text-slate-200 dark:hover:text-primary dark:hover:bg-slate-800'
-    }`;
-  };
-
   return (
-    <nav className="bg-white/80 dark:bg-slate-900/80 backdrop-blur border-b border-gray-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm transition-colors">
+    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
           <Link to={isAdmin ? '/admin' : '/'} className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold shadow-sm">SP</span>
-            <span className="text-lg font-semibold text-gray-800 dark:text-slate-50">Smart Parking</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+              SP
+            </div>
+            <span className="text-lg font-bold tracking-tight">Smart Parking</span>
           </Link>
 
-          <div className="hidden md:flex items-center gap-1">
-            {!isAdmin && <NavLink to="/" className={navLinkClass}>Home</NavLink>}
-            {!isAdmin && <NavLink to="/dashboard" className={navLinkClass}>Parking</NavLink>}
-            {user && !isAdmin && <NavLink to="/payment" className={navLinkClass}>Payment</NavLink>}
-            {isAdmin && <NavLink to="/admin" className={adminNavLinkClass}>Admin</NavLink>}
-          </div>
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-8">
+            {!isAdmin && (
+              <>
+                <NavLink to="/" className={navLinkClass}>Home</NavLink>
+                <NavLink to="/dashboard" className={navLinkClass}>Find Parking</NavLink>
+                {user && <NavLink to="/payment" className={navLinkClass}>Payment</NavLink>}
+              </>
+            )}
+            {isAdmin && <NavLink to="/admin" className={navLinkClass}>Admin</NavLink>}
+          </nav>
 
-          <div className="hidden md:flex items-center gap-3">
+          {/* Actions */}
+          <div className="hidden md:flex items-center gap-4">
             <button
-              type="button"
               onClick={toggleTheme}
-              aria-label="Toggle dark mode"
-              className="inline-flex items-center justify-center h-9 w-9 rounded-full border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 transition-colors btn-soft"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
             >
               {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
+
             {!user ? (
-              <>
-                <Link to="/login" className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-primary dark:text-slate-200 btn-soft">Log in</Link>
-                <Link to="/register" className="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-dark rounded-md shadow-sm btn-soft">Sign up</Link>
-              </>
+              <div className="flex items-center gap-2">
+                <Link to="/login" className="text-sm font-medium text-muted-foreground hover:text-foreground px-3 py-2 transition-colors">
+                  Log in
+                </Link>
+                <Link to="/register" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 transition-colors">
+                  Sign up
+                </Link>
+              </div>
             ) : (
               <div className="relative" ref={dropdownRef}>
                 <button
                   onClick={() => setProfileDropdown(!profileDropdown)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors btn-soft"
+                  className="flex items-center gap-2 rounded-full border border-border bg-background pl-2 pr-4 py-1 hover:bg-accent transition-colors"
                 >
-                  {/* Profile Icon */}
-                  <div className="h-8 w-8 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium shadow-sm">
+                  <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
                     {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
                   </div>
-
-                  {/* Username */}
-                  <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
-                    {user.displayName || user.email?.split('@')[0] || 'User'}
+                  <span className="text-sm font-medium max-w-[100px] truncate">
+                    {user.displayName || user.email?.split('@')[0]}
                   </span>
-
-                  {/* Dropdown Arrow */}
-                  <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                  </svg>
+                  <ChevronDown className={`h-3 w-3 text-muted-foreground transition-transform ${profileDropdown ? 'rotate-180' : ''}`} />
                 </button>
 
                 <AnimatePresence>
                   {profileDropdown && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                      initial={{ opacity: 0, y: 5, scale: 0.95 }}
                       animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                      transition={{ duration: 0.18, ease: 'easeOut' }}
-                      className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-md shadow-lg border border-gray-200 dark:border-slate-700 py-1 z-50"
+                      exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                      transition={{ duration: 0.1 }}
+                      className="absolute right-0 mt-2 w-56 origin-top-right rounded-lg border border-border bg-popover p-1 shadow-lg"
                     >
-                      <div className="px-4 py-3 border-b border-gray-200 dark:border-slate-700">
-                        <div className="text-sm font-medium text-gray-900 dark:text-slate-100">
-                          {user.displayName || user.email?.split('@')[0] || 'User'}
-                        </div>
-                      </div>
-                      <Link
-                        to="/profile"
-                        onClick={() => setProfileDropdown(false)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800"
-                      >
-                        <FaUser className="text-gray-500" size={14} />
-                        Profile
+                      <div className="px-2 py-1.5 text-sm font-semibold">My Account</div>
+                      <div className="h-px bg-border my-1" />
+                      
+                      <Link to="/profile" className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors">
+                        <User className="h-4 w-4" /> Profile
                       </Link>
+                      
+                      {!isAdmin && (
+                        <>
+                          <Link to="/dashboard" className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors">
+                            <MapPin className="h-4 w-4" /> Parking
+                          </Link>
+                          <Link to="/payment" className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors">
+                            <CreditCard className="h-4 w-4" /> Payment
+                          </Link>
+                        </>
+                      )}
+                      
+                      {isAdmin && (
+                        <Link to="/admin" className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md hover:bg-accent hover:text-accent-foreground transition-colors">
+                          <Shield className="h-4 w-4" /> Admin
+                        </Link>
+                      )}
+
+                      <div className="h-px bg-border my-1" />
+                      
                       <button
-                        onClick={() => { logout(); setProfileDropdown(false); }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-slate-200 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
+                        onClick={logout}
+                        className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-destructive rounded-md hover:bg-destructive/10 transition-colors"
                       >
-                        Sign out
+                        <LogOut className="h-4 w-4" /> Sign out
                       </button>
                     </motion.div>
                   )}
@@ -133,79 +136,58 @@ const Header = () => {
             )}
           </div>
 
-          <button
-            onClick={() => setOpen(!open)}
-            className="md:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-700 hover:bg-gray-100 focus:outline-none"
-            aria-label="Toggle menu"
-          >
-            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
+          {/* Mobile Toggle */}
+          <div className="flex md:hidden items-center gap-2">
+             <button onClick={toggleTheme} className="p-2 text-muted-foreground">
+              {theme === 'dark' ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </button>
+            <button onClick={() => setOpen(!open)} className="p-2 text-foreground">
+              {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Mobile Menu */}
       <AnimatePresence>
         {open && (
           <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className="md:hidden border-t border-gray-200 bg-white/95 dark:bg-slate-900/95 backdrop-blur"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="md:hidden border-t border-border bg-background"
           >
-            <div className="space-y-1 px-4 py-3">
-              {!isAdmin && <NavLink to="/" className={navLinkClass} onClick={() => setOpen(false)}>Home</NavLink>}
-              {!isAdmin && <NavLink to="/dashboard" className={navLinkClass} onClick={() => setOpen(false)}>Parking</NavLink>}
-              {user && !isAdmin && <NavLink to="/payment" className={navLinkClass} onClick={() => setOpen(false)}>Payment</NavLink>}
-              {isAdmin && <NavLink to="/admin" className={adminNavLinkClass} onClick={() => setOpen(false)}>Admin</NavLink>}
-
-              <div className="pt-2 space-y-3">
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className="mb-1 inline-flex items-center gap-2 px-3 py-2 rounded-md border border-gray-200 bg-white text-gray-700 shadow-sm hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 text-sm btn-soft"
-                >
-                  {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-                  <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-                </button>
-                {!user ? (
-                  <>
-                    <Link to="/login" className="block px-3 py-2 text-sm font-medium text-gray-700 hover:text-primary dark:text-slate-200 btn-soft" onClick={() => setOpen(false)}>Log in</Link>
-                    <Link to="/register" className="block mt-1 px-3 py-2 text-sm font-medium text-white bg-primary rounded-md btn-soft" onClick={() => setOpen(false)}>Sign up</Link>
-                  </>
-                ) : (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 px-3 py-2 border rounded-md">
-                      <div className="h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-medium">
-                        {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
-                      </div>
-                      <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
-                        {user.displayName || user.email?.split('@')[0] || 'User'}
-                      </span>
+            <div className="space-y-1 p-4">
+              {!isAdmin && (
+                <>
+                  <NavLink to="/" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent">Home</NavLink>
+                  <NavLink to="/dashboard" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent">Parking</NavLink>
+                  {user && <NavLink to="/payment" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent">Payment</NavLink>}
+                </>
+              )}
+              {isAdmin && <NavLink to="/admin" className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent">Admin</NavLink>}
+              
+              {!user ? (
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Link to="/login" className="flex items-center justify-center px-4 py-2 rounded-md border border-input bg-background hover:bg-accent text-sm font-medium">Log in</Link>
+                  <Link to="/register" className="flex items-center justify-center px-4 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium">Sign up</Link>
+                </div>
+              ) : (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <div className="flex items-center gap-3 px-3 mb-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+                      {(user.displayName || user.email || 'U').charAt(0).toUpperCase()}
                     </div>
-
-                    <div className="flex gap-2">
-                      <Link to="/profile" onClick={() => setOpen(false)}
-                        className="inline-flex mt-1 px-3 py-2 text-sm font-medium border rounded-md text-center btn-soft"
-                      >
-                        <FaUser size={14} /> Profile
-                      </Link>
-                      <button
-                        onClick={() => { logout(); setOpen(false); }}
-                        className="flex-1 mt-1 px-3 py-2 text-sm font-medium border rounded-md btn-soft"
-                      >
-                        Sign out
-                      </button>
-                    </div>
+                    <div className="text-sm font-medium">{user.email}</div>
                   </div>
-                )}
-              </div>
+                  <button onClick={logout} className="w-full text-left px-3 py-2 text-destructive hover:bg-destructive/10 rounded-md">Sign out</button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+    </header>
   );
 };
 

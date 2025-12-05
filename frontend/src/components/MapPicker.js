@@ -15,7 +15,7 @@ const MapPicker = ({ latitude, longitude, onLocationChange }) => {
   const handleMapClick = (e) => {
     if (!showMap) return;
     
-    // This is a simplified version - in a real app you'd use a proper map library
+    // This is a simplified version, in a real app you'd use a proper map library
     // For now, we'll just show the map and let users manually enter coordinates
     setShowMap(true);
   };
@@ -55,7 +55,7 @@ const MapPicker = ({ latitude, longitude, onLocationChange }) => {
           {showMap ? 'Hide Map' : 'Show Map'}
         </button>
       </div>
-
+// 
       {showMap && (
         <div className="border rounded-lg overflow-hidden">
           {mapUrl ? (
