@@ -1,3 +1,4 @@
+import EditParkingAreaModal from '../components/EditParkingArea';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -13,6 +14,8 @@ const ParkingAreasPage = () => {
   const [showForm, setShowForm] = useState(location.state?.openForm || false);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingArea, setEditingArea] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -138,6 +141,58 @@ const getAuthHeader = useCallback(() => {
       setIsSubmitting(false);
     }
   };
+
+  const openEditModal = (area) => {
+  setEditingArea({
+    _id: area._id,
+    name: area.name,
+    address: area.address,
+    totalSlots: area.totalSlots,
+    latitude: area.location.latitude,
+    longitude: area.location.longitude,
+    photo: area.photo || ''
+  });
+  setIsEditOpen(true);
+};
+
+
+const handleUpdateParkingArea = async () => {
+  try {
+    const res = await fetch(
+      `${API_URL}/parking-areas/${editingArea._id}`,
+      {
+        method: 'PUT',
+        headers: getAuthHeader(),
+        body: JSON.stringify({
+          name: editingArea.name,
+          address: editingArea.address,
+          totalSlots: editingArea.totalSlots,
+          location: {
+            latitude: editingArea.latitude,
+            longitude: editingArea.longitude
+          },
+          photo: editingArea.photo
+        })
+      }
+    );
+
+    if (!res.ok) throw new Error('Update failed');
+
+    const { parkingArea } = await res.json();
+
+    setParkingAreas((prev) =>
+      prev.map((p) =>
+        p._id === parkingArea._id ? parkingArea : p
+      )
+    );
+
+    toast.success('Parking area updated');
+    setIsEditOpen(false);
+  } catch (err) {
+    toast.error(err.message);
+  }
+};
+
 
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this parking area?')) {
@@ -444,6 +499,13 @@ const getAuthHeader = useCallback(() => {
                           {area.active ? 'Deactivate' : 'Activate'}
                         </button>
                         <button
+  onClick={() => openEditModal(area)}
+  className="px-4 py-2 rounded-lg border border-blue-500 text-blue-600 hover:bg-blue-50"
+>
+  Edit
+</button>
+
+                        <button
                           onClick={() => handleDelete(area._id)}
                           className="px-2 py-1 rounded-md border border-red-300 text-red-700 text-xs hover:bg-red-50"
                         >
@@ -458,6 +520,14 @@ const getAuthHeader = useCallback(() => {
           </div>
         )}
       </div>
+       {isEditOpen && (
+        <EditParkingAreaModal
+          data={editingArea}
+          setData={setEditingArea}
+          onClose={() => setIsEditOpen(false)}
+          onSave={handleUpdateParkingArea}
+        />
+      )}
     </div>
   );
 };
