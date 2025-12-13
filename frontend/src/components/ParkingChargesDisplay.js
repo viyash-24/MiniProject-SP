@@ -75,7 +75,7 @@ const ParkingChargesDisplay = ({ compact = false, showHeading = true }) => {
               
               <div>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-bold text-foreground">₹{charge.amount}</span>
+                  <span className="text-2xl font-bold text-foreground">RS.{charge.amount}</span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">{charge.duration}</p>
               </div>
