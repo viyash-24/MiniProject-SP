@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import EditParkingAreaModal from "../components/EditParkingArea";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
@@ -92,6 +93,55 @@ const AdminDashboardPage = () => {
     }),
     [user?.email]
   );
+
+  // Edit parking area modal state
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingArea, setEditingArea] = useState(null);
+
+  const openEditModal = (area) => {
+    setEditingArea({
+      _id: area._id,
+      name: area.name,
+      address: area.address,
+      totalSlots: area.totalSlots ?? area.slotAmount ?? 0,
+      latitude: area.location?.latitude ?? 0,
+      longitude: area.location?.longitude ?? 0,
+      photo: area.photo || "",
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateParkingArea = async () => {
+    try {
+      const res = await fetch(`${API_URL}/parking-areas/${editingArea._id}`, {
+        method: "PUT",
+        headers: authHeader,
+        body: JSON.stringify({
+          name: editingArea.name,
+          address: editingArea.address,
+          totalSlots: editingArea.totalSlots,
+          location: {
+            latitude: editingArea.latitude,
+            longitude: editingArea.longitude,
+          },
+          photo: editingArea.photo,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Update failed");
+
+      const { parkingArea } = await res.json();
+
+      setParkingAreas((prev) =>
+        prev.map((p) => (p._id === parkingArea._id ? parkingArea : p))
+      );
+
+      setIsEditOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to update parking area");
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -1465,6 +1515,12 @@ const AdminDashboardPage = () => {
                           {area.active ? "Deactivate" : "Activate"}
                         </button>
                         <button
+                          onClick={() => openEditModal(area)}
+                          className="flex-1 rounded-lg border border-blue-300 px-3 py-2 text-sm font-medium text-blue-700 transition hover:bg-blue-50 dark:border-blue-500/40 dark:text-blue-300 dark:hover:bg-blue-500/10"
+                        >
+                          Edit
+                        </button>
+                        <button
                           onClick={() => deleteParkingAreaEntry(area._id)}
                           className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-500/40 dark:text-red-300 dark:hover:bg-red-500/10"
                         >
@@ -1483,6 +1539,15 @@ const AdminDashboardPage = () => {
                 </div>
               )}
             </div>
+          )}
+
+          {isEditOpen && (
+            <EditParkingAreaModal
+              data={editingArea}
+              setData={setEditingArea}
+              onClose={() => setIsEditOpen(false)}
+              onSave={handleUpdateParkingArea}
+            />
           )}
 
           {tab === "parking-charges" && (
