@@ -64,6 +64,10 @@ const AdminDashboardPage = () => {
     latitude: "",
     longitude: "",
     slotAmount: 20,
+    carSlots: "",
+    bikeSlots: "",
+    vanSlots: "",
+    threeWheelerSlots: "",
     photo: "",
   });
 
@@ -104,6 +108,10 @@ const AdminDashboardPage = () => {
       name: area.name,
       address: area.address,
       totalSlots: area.totalSlots ?? area.slotAmount ?? 0,
+      carSlots: area.carSlots ?? 0,
+      bikeSlots: area.bikeSlots ?? 0,
+      vanSlots: area.vanSlots ?? 0,
+      threeWheelerSlots: area.threeWheelerSlots ?? 0,
       latitude: area.location?.latitude ?? 0,
       longitude: area.location?.longitude ?? 0,
       photo: area.photo || "",
@@ -113,13 +121,18 @@ const AdminDashboardPage = () => {
 
   const handleUpdateParkingArea = async () => {
     try {
+      const sumTyped = Number(editingArea.carSlots||0) + Number(editingArea.bikeSlots||0) + Number(editingArea.vanSlots||0) + Number(editingArea.threeWheelerSlots||0);
       const res = await fetch(`${API_URL}/parking-areas/${editingArea._id}`, {
         method: "PUT",
         headers: authHeader,
         body: JSON.stringify({
           name: editingArea.name,
           address: editingArea.address,
-          totalSlots: editingArea.totalSlots,
+          totalSlots: sumTyped > 0 ? sumTyped : editingArea.totalSlots,
+          carSlots: Number(editingArea.carSlots||0),
+          bikeSlots: Number(editingArea.bikeSlots||0),
+          vanSlots: Number(editingArea.vanSlots||0),
+          threeWheelerSlots: Number(editingArea.threeWheelerSlots||0),
           location: {
             latitude: editingArea.latitude,
             longitude: editingArea.longitude,
@@ -202,7 +215,7 @@ const AdminDashboardPage = () => {
 
     try {
       const res = await fetch(
-        `${API_URL}/slot-management/parking-areas/${parkingAreaId}/available-slots`
+        `${API_URL}/slot-management/parking-areas/${parkingAreaId}/available-slots?vehicleType=${encodeURIComponent(newVehicle.vehicleType)}`
       );
       const data = await res.json();
       if (!res.ok) {
@@ -470,12 +483,16 @@ const AdminDashboardPage = () => {
       latitude: "",
       longitude: "",
       slotAmount: "",
+      carSlots: "",
+      bikeSlots: "",
+      vanSlots: "",
+      threeWheelerSlots: "",
       photo: "",
     });
 
   const createParkingArea = async (e) => {
     e.preventDefault();
-    const { name, address, latitude, longitude, slotAmount, photo } =
+    const { name, address, latitude, longitude, slotAmount, photo, carSlots, bikeSlots, vanSlots, threeWheelerSlots } =
       newParkingArea;
 
     if (!name.trim() || !address.trim() || !latitude || !longitude) {
@@ -492,8 +509,13 @@ const AdminDashboardPage = () => {
       return;
     }
 
-    if (!Number.isFinite(parsedSlots) || parsedSlots <= 0) {
-      toast.error("Total slots must be greater than 0");
+    const parsedCar = Number(carSlots || 0);
+    const parsedBike = Number(bikeSlots || 0);
+    const parsedVan = Number(vanSlots || 0);
+    const parsedThree = Number(threeWheelerSlots || 0);
+    const sumTyped = parsedCar + parsedBike + parsedVan + parsedThree;
+    if (!(Number.isFinite(parsedSlots) && parsedSlots > 0) && sumTyped <= 0) {
+      toast.error("Provide total slots or per-type counts > 0");
       return;
     }
 
@@ -504,7 +526,11 @@ const AdminDashboardPage = () => {
         body: JSON.stringify({
           name: name.trim(),
           address: address.trim(),
-          slotAmount: parsedSlots,
+          slotAmount: sumTyped > 0 ? sumTyped : parsedSlots,
+          carSlots: parsedCar,
+          bikeSlots: parsedBike,
+          vanSlots: parsedVan,
+          threeWheelerSlots: parsedThree,
           photo: photo?.trim() || undefined,
           location: {
             latitude: parsedLat,
@@ -1391,23 +1417,95 @@ const AdminDashboardPage = () => {
                   </div>
                 </div>
                 <div className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
-                      Total Slots
-                    </label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={newParkingArea.slotAmount}
-                      onChange={(e) =>
-                        setNewParkingArea((prev) => ({
-                          ...prev,
-                          slotAmount: e.target.value,
-                        }))
-                      }
-                      required
-                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                    />
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                        Car Slots
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newParkingArea.carSlots}
+                        onChange={(e) =>
+                          setNewParkingArea((prev) => ({
+                            ...prev,
+                            carSlots: e.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                        Bike Slots
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newParkingArea.bikeSlots}
+                        onChange={(e) =>
+                          setNewParkingArea((prev) => ({
+                            ...prev,
+                            bikeSlots: e.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                        Van Slots
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newParkingArea.vanSlots}
+                        onChange={(e) =>
+                          setNewParkingArea((prev) => ({
+                            ...prev,
+                            vanSlots: e.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                        Three-wheeler Slots
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={newParkingArea.threeWheelerSlots}
+                        onChange={(e) =>
+                          setNewParkingArea((prev) => ({
+                            ...prev,
+                            threeWheelerSlots: e.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
+                        Total Slots (auto-calculated; fallback to this if empty)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={newParkingArea.slotAmount}
+                        onChange={(e) =>
+                          setNewParkingArea((prev) => ({
+                            ...prev,
+                            slotAmount: e.target.value,
+                          }))
+                        }
+                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      />
+                      <div className="text-xs text-gray-500 mt-1 dark:text-slate-400">
+                        Current sum: {Number(newParkingArea.carSlots||0) + Number(newParkingArea.bikeSlots||0) + Number(newParkingArea.vanSlots||0) + Number(newParkingArea.threeWheelerSlots||0)}
+                      </div>
+                    </div>
                   </div>
                   <MapPicker
                     latitude={

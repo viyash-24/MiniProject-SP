@@ -11,6 +11,7 @@ const ParkingAreaDetailsPage = () => {
   const [parkingArea, setParkingArea] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [availableSlots, setAvailableSlots] = useState(0);
+  const [availableByType, setAvailableByType] = useState({ car: 0, bike: 0, van: 0, threeWheeler: 0 });
 
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   const BASE_URL = API_URL.replace('/api', '');
@@ -63,6 +64,7 @@ const ParkingAreaDetailsPage = () => {
           normalizedParkingArea?.totalSlots ??
           0
         );
+        setAvailableByType(normalizedParkingArea?.availableByType || { car: 0, bike: 0, van: 0, threeWheeler: 0 });
       } catch (error) {
         console.error('Error fetching parking area details:', error);
         toast.error(error.message || 'Failed to fetch parking area details');
@@ -73,6 +75,8 @@ const ParkingAreaDetailsPage = () => {
     };
 
     fetchParkingArea();
+    const interval = setInterval(fetchParkingArea, 10000);
+    return () => clearInterval(interval);
   }, [id, user, navigate, logout, API_URL, isAdmin]);
 
   if (isLoading) {
@@ -167,6 +171,28 @@ const ParkingAreaDetailsPage = () => {
                 </div>
               </div>
 
+              <div className="mt-4">
+                <span className="font-medium text-gray-700">Available by vehicle type:</span>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-2">
+                  <div className="p-3 border rounded-md">
+                    <div className="text-xs text-gray-500">Car</div>
+                    <div className="text-lg font-semibold">{availableByType.car}</div>
+                  </div>
+                  <div className="p-3 border rounded-md">
+                    <div className="text-xs text-gray-500">Bike</div>
+                    <div className="text-lg font-semibold">{availableByType.bike}</div>
+                  </div>
+                  <div className="p-3 border rounded-md">
+                    <div className="text-xs text-gray-500">Van</div>
+                    <div className="text-lg font-semibold">{availableByType.van}</div>
+                  </div>
+                  <div className="p-3 border rounded-md">
+                    <div className="text-xs text-gray-500">Three-wheeler</div>
+                    <div className="text-lg font-semibold">{availableByType.threeWheeler}</div>
+                  </div>
+                </div>
+              </div>
+
               <div>
                 <span className="font-medium text-gray-700">Status:</span>
                 <span className={`ml-2 px-2 py-1 rounded-full text-sm ${
@@ -205,14 +231,7 @@ const ParkingAreaDetailsPage = () => {
               >
                 View All Parking Areas
               </button>
-              {parkingArea.active && availableSlots > 0 && (
-                <button 
-                  onClick={() => navigate('/payment')}
-                  className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 transition-colors"
-                >
-                  Reserve Parking Spot
-                </button>
-              )}
+              
             </div>
           </div>
         </div>

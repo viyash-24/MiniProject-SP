@@ -13,10 +13,10 @@ export async function listParkingAreas(_req, res) {
 
 export async function createParkingArea(req, res) {
   try {
-    const { name, address, location, photo, slotAmount } = req.body;
+    const { name, address, location, photo, slotAmount, carSlots, bikeSlots, vanSlots, threeWheelerSlots } = req.body;
     const adminEmail = req.headers['x-admin-email'];
 
-    if (!name || !address || !location || !slotAmount) {
+    if (!name || !address || !location) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -24,13 +24,29 @@ export async function createParkingArea(req, res) {
       return res.status(400).json({ error: 'Location coordinates are required' });
     }
 
+    // Determine totals based on per-type counts if provided
+    const c = Number(carSlots || 0);
+    const b = Number(bikeSlots || 0);
+    const v = Number(vanSlots || 0);
+    const t = Number(threeWheelerSlots || 0);
+    const sumTyped = c + b + v + t;
+    const total = sumTyped > 0 ? sumTyped : Number(slotAmount || 0);
+
+    if (!total || total <= 0) {
+      return res.status(400).json({ error: 'Total slots must be greater than 0' });
+    }
+
     const parkingArea = await ParkingArea.create({
       name,
       address,
       location,
       photo,
-      totalSlots: slotAmount,
-      availableSlots: slotAmount, // Initially all slots are available
+      carSlots: c,
+      bikeSlots: b,
+      vanSlots: v,
+      threeWheelerSlots: t,
+      totalSlots: total,
+      availableSlots: total, // Initially all slots are available
       occupiedSlots: 0,
       createdBy: adminEmail
     });
@@ -50,7 +66,7 @@ export async function createParkingArea(req, res) {
 export async function updateParkingArea(req, res) {
   try {
     const { id } = req.params;
-    const { name, address, location, photo, slotAmount, active } = req.body;
+    const { name, address, location, photo, slotAmount, carSlots, bikeSlots, vanSlots, threeWheelerSlots, active } = req.body;
 
     // If slotAmount is being updated, we need to adjust availableSlots accordingly
     const existingArea = await ParkingArea.findById(id);
@@ -60,8 +76,25 @@ export async function updateParkingArea(req, res) {
 
     let updateData = { name, address, location, photo, active };
 
-    // If slotAmount is being changed, update totalSlots and adjust availableSlots
-    if (slotAmount && slotAmount !== existingArea.totalSlots) {
+    // Decide target totals
+    const hasTyped = [carSlots, bikeSlots, vanSlots, threeWheelerSlots].some(v => v !== undefined && v !== null);
+    if (hasTyped) {
+      const c = Number(carSlots ?? existingArea.carSlots ?? 0);
+      const b = Number(bikeSlots ?? existingArea.bikeSlots ?? 0);
+      const v = Number(vanSlots ?? existingArea.vanSlots ?? 0);
+      const t = Number(threeWheelerSlots ?? existingArea.threeWheelerSlots ?? 0);
+      const sum = c + b + v + t;
+      updateData.carSlots = c;
+      updateData.bikeSlots = b;
+      updateData.vanSlots = v;
+      updateData.threeWheelerSlots = t;
+      if (sum > 0 && sum !== existingArea.totalSlots) {
+        const diff = sum - existingArea.totalSlots;
+        updateData.totalSlots = sum;
+        updateData.availableSlots = Math.max(0, (existingArea.availableSlots ?? 0) + diff);
+      }
+    } else if (slotAmount && slotAmount !== existingArea.totalSlots) {
+      // Fallback to legacy single total update
       const slotDifference = slotAmount - existingArea.totalSlots;
       updateData.totalSlots = slotAmount;
       updateData.availableSlots = Math.max(0, existingArea.availableSlots + slotDifference);
@@ -155,7 +188,7 @@ export async function listPublicParkingAreas(req, res) {
       .limit(limit)
       .lean(); // Convert to plain JS objects
 
-    // Calculate available slots for each parking area
+    // Calculate available slots (total and per vehicle type) for each parking area
     const parkingAreasWithSlots = await Promise.all(
       parkingAreas.map(async (area) => {
         try {
@@ -168,11 +201,37 @@ export async function listPublicParkingAreas(req, res) {
 
           const availableSlots = Math.max(0, area.totalSlots - occupiedSlots);
 
+          // Per-type availability
+          const totals = {
+            Car: Number(area.carSlots || 0),
+            Bike: Number(area.bikeSlots || 0),
+            Van: Number(area.vanSlots || 0),
+            'Three-wheeler': Number(area.threeWheelerSlots || 0)
+          };
+          const occupiedByTypeAgg = await Vehicle.aggregate([
+            { $match: { parkingAreaId: area._id, status: { $in: ['Parked', 'Paid'] } } },
+            { $group: { _id: { $toLower: '$vehicleType' }, count: { $sum: 1 } } }
+          ]);
+          const occupiedByType = occupiedByTypeAgg.reduce((acc, cur) => {
+            const key = (cur._id || '').toLowerCase();
+            const map = { car: 'Car', suv: 'Car', bike: 'Bike', scooter: 'Bike', van: 'Van', truck: 'Van', 'three-wheeler': 'Three-wheeler', auto: 'Three-wheeler' };
+            const type = map[key] || 'Other';
+            if (type !== 'Other') acc[type] = (acc[type] || 0) + cur.count;
+            return acc;
+          }, {});
+          const availableByType = {
+            car: Math.max(0, (totals.Car || 0) - (occupiedByType['Car'] || 0)),
+            bike: Math.max(0, (totals.Bike || 0) - (occupiedByType['Bike'] || 0)),
+            van: Math.max(0, (totals.Van || 0) - (occupiedByType['Van'] || 0)),
+            threeWheeler: Math.max(0, (totals['Three-wheeler'] || 0) - (occupiedByType['Three-wheeler'] || 0))
+          };
+
           return {
             ...area,
             slotAmount: area.totalSlots,
             availableSlots,
-            occupiedSlots
+            occupiedSlots,
+            availableByType
           };
         } catch (error) {
           console.error(`Error calculating slots for area ${area._id}:`, error);
@@ -181,7 +240,8 @@ export async function listPublicParkingAreas(req, res) {
             ...area,
             slotAmount: area.totalSlots,
             availableSlots: area.totalSlots,
-            occupiedSlots: 0
+            occupiedSlots: 0,
+            availableByType: { car: Number(area.carSlots||0), bike: Number(area.bikeSlots||0), van: Number(area.vanSlots||0), threeWheeler: Number(area.threeWheelerSlots||0) }
           };
         }
       })
@@ -243,13 +303,39 @@ export async function getPublicParkingArea(req, res) {
 
     const availableSlots = Math.max(0, parkingArea.totalSlots - occupiedSlots);
 
+    // Per-type availability for single area
+    const totals = {
+      Car: Number(parkingArea.carSlots || 0),
+      Bike: Number(parkingArea.bikeSlots || 0),
+      Van: Number(parkingArea.vanSlots || 0),
+      'Three-wheeler': Number(parkingArea.threeWheelerSlots || 0)
+    };
+    const occupiedByTypeAgg = await Vehicle.aggregate([
+      { $match: { parkingAreaId: parkingArea._id, status: { $in: ['Parked', 'Paid'] } } },
+      { $group: { _id: { $toLower: '$vehicleType' }, count: { $sum: 1 } } }
+    ]);
+    const occupiedByType = occupiedByTypeAgg.reduce((acc, cur) => {
+      const key = (cur._id || '').toLowerCase();
+      const map = { car: 'Car', suv: 'Car', bike: 'Bike', scooter: 'Bike', van: 'Van', truck: 'Van', 'three-wheeler': 'Three-wheeler', auto: 'Three-wheeler' };
+      const type = map[key] || 'Other';
+      if (type !== 'Other') acc[type] = (acc[type] || 0) + cur.count;
+      return acc;
+    }, {});
+    const availableByType = {
+      car: Math.max(0, (totals.Car || 0) - (occupiedByType['Car'] || 0)),
+      bike: Math.max(0, (totals.Bike || 0) - (occupiedByType['Bike'] || 0)),
+      van: Math.max(0, (totals.Van || 0) - (occupiedByType['Van'] || 0)),
+      threeWheeler: Math.max(0, (totals['Three-wheeler'] || 0) - (occupiedByType['Three-wheeler'] || 0))
+    };
+
     res.json({
       success: true,
       parkingArea: {
         ...parkingArea,
         slotAmount: parkingArea.totalSlots,
         availableSlots,
-        occupiedSlots
+        occupiedSlots,
+        availableByType
       }
     });
   } catch (error) {

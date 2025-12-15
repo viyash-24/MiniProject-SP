@@ -24,15 +24,41 @@ const EditParkingAreaModal = ({ data, setData, onClose, onSave }) => {
           placeholder="Address"
         />
 
-        <input
-          type="number"
-          value={data.totalSlots}
-          onChange={(e) =>
-            setData({ ...data, totalSlots: Number(e.target.value) })
-          }
-          className="input"
-          placeholder="Total Slots"
-        />
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            type="number"
+            value={data.carSlots ?? 0}
+            onChange={(e) => setData({ ...data, carSlots: Number(e.target.value) })}
+            className="input"
+            placeholder="Car Slots"
+            min={0}
+          />
+          <input
+            type="number"
+            value={data.bikeSlots ?? 0}
+            onChange={(e) => setData({ ...data, bikeSlots: Number(e.target.value) })}
+            className="input"
+            placeholder="Bike Slots"
+            min={0}
+          />
+          <input
+            type="number"
+            value={data.vanSlots ?? 0}
+            onChange={(e) => setData({ ...data, vanSlots: Number(e.target.value) })}
+            className="input"
+            placeholder="Van Slots"
+            min={0}
+          />
+          <input
+            type="number"
+            value={data.threeWheelerSlots ?? 0}
+            onChange={(e) => setData({ ...data, threeWheelerSlots: Number(e.target.value) })}
+            className="input"
+            placeholder="Three-wheeler Slots"
+            min={0}
+          />
+          <div className="col-span-2 text-sm text-gray-600">Total (calculated): {Number(data.carSlots||0)+Number(data.bikeSlots||0)+Number(data.vanSlots||0)+Number(data.threeWheelerSlots||0) || data.totalSlots}</div>
+        </div>
 
         <MapPicker
           latitude={data.latitude}
