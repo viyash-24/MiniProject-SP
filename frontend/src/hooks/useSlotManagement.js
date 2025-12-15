@@ -40,9 +40,10 @@ const useSlotManagement = () => {
     }
   };
 
-  const getAvailableSlots = async (parkingAreaId) => {
+  const getAvailableSlots = async (parkingAreaId, vehicleType) => {
     try {
-      const response = await fetch(`${API_URL}/slot-management/parking-areas/${parkingAreaId}/available-slots`);
+      const query = vehicleType ? `?vehicleType=${encodeURIComponent(vehicleType)}` : '';
+      const response = await fetch(`${API_URL}/slot-management/parking-areas/${parkingAreaId}/available-slots${query}`);
       const data = await response.json();
       
       if (response.ok) {
