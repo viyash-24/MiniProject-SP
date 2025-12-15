@@ -37,7 +37,7 @@ export async function getAvailableSlots(req, res) {
     const requestedType = normalizeType(req.query.vehicleType);
     
     const parkingArea = await ParkingArea.findById(parkingAreaId)
-      .select('name totalSlots availableSlots occupiedSlots slots');
+      .select('name totalSlots availableSlots occupiedSlots slots carSlots bikeSlots vanSlots threeWheelerSlots');
     
     if (!parkingArea) {
       return res.status(404).json({ error: 'Parking area not found' });
@@ -110,6 +110,40 @@ export async function getAvailableSlots(req, res) {
     );
 
     await parkingArea.save();
+
+    // Ensure slot vehicleType alignment with per-type counts when available.
+    // This doesn't change assignment logic; it only reconciles metadata for preview/validation.
+    const carCount = Number(parkingArea.carSlots || 0);
+    const bikeCount = Number(parkingArea.bikeSlots || 0);
+    const vanCount = Number(parkingArea.vanSlots || 0);
+    const threeCount = Number(parkingArea.threeWheelerSlots || 0);
+    const sumTyped = carCount + bikeCount + vanCount + threeCount;
+
+    if (sumTyped > 0 && Array.isArray(parkingArea.slots) && parkingArea.slots.length > 0) {
+      // Sort by slotNumber to map consistently even when numbering doesn't start at 1
+      const sorted = [...parkingArea.slots].sort((a, b) => (a.slotNumber || 0) - (b.slotNumber || 0));
+      // Build desired typed layout by index
+      const desired = [];
+      for (let i = 0; i < carCount; i++) desired.push('Car');
+      for (let i = 0; i < bikeCount; i++) desired.push('Bike');
+      for (let i = 0; i < vanCount; i++) desired.push('Van');
+      for (let i = 0; i < threeCount; i++) desired.push('Three-wheeler');
+      while (desired.length < sorted.length) desired.push('Car'); // fallback fill
+
+      let changed = false;
+      for (let i = 0; i < sorted.length; i++) {
+        const slot = sorted[i];
+        const want = desired[i];
+        if (!slot.isOccupied && want && normalizeType(slot.vehicleType) !== normalizeType(want)) {
+          slot.vehicleType = want;
+          changed = true;
+        }
+      }
+      if (changed) {
+        // Persist the reconciled types so downstream assignment validation remains consistent
+        await parkingArea.save();
+      }
+    }
 
     let availableSlots = parkingArea.slots.filter(slot => !slot.isOccupied);
     if (requestedType) {

@@ -58,6 +58,7 @@ const AdminDashboardPage = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [showSlotPopup, setShowSlotPopup] = useState(false);
   const [selectedSlotNumber, setSelectedSlotNumber] = useState(null);
+  const [slotNumberBase, setSlotNumberBase] = useState(undefined);
   const [newParkingArea, setNewParkingArea] = useState({
     name: "",
     address: "",
@@ -226,6 +227,27 @@ const AdminDashboardPage = () => {
       console.error("Error fetching available slots:", error);
       toast.error(error.message || "Failed to fetch available slots");
       setAvailableSlots([]);
+    }
+  };
+
+  const fetchAreaSlotBase = async (parkingAreaId) => {
+    try {
+      const res = await fetch(`${API_URL}/parking-areas/${parkingAreaId}`, { headers: authHeader });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch area');
+      const slots = data.parkingArea?.slots || [];
+      if (Array.isArray(slots) && slots.length > 0) {
+        let min = Infinity;
+        for (const s of slots) {
+          if (typeof s.slotNumber === 'number' && s.slotNumber < min) min = s.slotNumber;
+        }
+        setSlotNumberBase(Number.isFinite(min) ? min : undefined);
+      } else {
+        setSlotNumberBase(undefined);
+      }
+    } catch (e) {
+      console.warn('Failed to fetch area details for base mapping:', e);
+      setSlotNumberBase(undefined);
     }
   };
 
@@ -953,7 +975,10 @@ const AdminDashboardPage = () => {
                           toast.error("Please select a parking area first");
                           return;
                         }
-                        await fetchAvailableSlotsForArea(selectedParkingArea);
+                        await Promise.all([
+                          fetchAvailableSlotsForArea(selectedParkingArea),
+                          fetchAreaSlotBase(selectedParkingArea)
+                        ]);
                         setShowSlotPopup(true);
                       }}
                       className="px-3 py-2 rounded-md bg-primary text-white disabled:bg-gray-400 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-slate-200"
@@ -1834,6 +1859,18 @@ const AdminDashboardPage = () => {
       <SelectSlotPopup
         isOpen={showSlotPopup}
         slots={availableSlots}
+        vehicleType={newVehicle.vehicleType}
+        typeDistribution={(() => {
+          const area = parkingAreas.find(a => a._id === selectedParkingArea);
+          if (!area) return null;
+          return {
+            Car: Number(area.carSlots || 0),
+            Bike: Number(area.bikeSlots || 0),
+            Van: Number(area.vanSlots || 0),
+            'Three-wheeler': Number(area.threeWheelerSlots || 0),
+          };
+        })()}
+        slotNumberBase={slotNumberBase}
         onClose={() => setShowSlotPopup(false)}
         onSelect={(slotNumber) => {
           setSelectedSlotNumber(slotNumber);

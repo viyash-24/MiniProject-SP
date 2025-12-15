@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import useSlotManagement from '../hooks/useSlotManagement';
 import SelectSlotPopup from '../components/SelectSlotPopup';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, RefreshCw, Plus, LogOut, Car, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/button';
+import { useAuth } from '../context/AuthContext';
 
 const AdminSlotManagementPage = () => {
   const {
@@ -17,6 +18,12 @@ const AdminSlotManagementPage = () => {
     initializeParkingAreaSlots,
     recalculateSlotCounts
   } = useSlotManagement();
+  const { user } = useAuth();
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const authHeader = useMemo(() => ({
+    'Content-Type': 'application/json',
+    'x-admin-email': user?.email || ''
+  }), [user?.email]);
 
   const [showRegisterForm, setShowRegisterForm] = useState(false);
   const [selectedParkingArea, setSelectedParkingArea] = useState('');
@@ -34,6 +41,35 @@ const AdminSlotManagementPage = () => {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState('');
   const [showSlotPopup, setShowSlotPopup] = useState(false);
+  const [areaTypeMap, setAreaTypeMap] = useState({});
+
+  // Fetch per-type slot counts for mapping-based filtering in modal
+  useEffect(() => {
+    let ignore = false;
+    const fetchAreasWithCounts = async () => {
+      try {
+        const res = await fetch(`${API_URL}/parking-areas`, { headers: authHeader });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to fetch areas');
+        if (ignore) return;
+        const map = {};
+        (data.parkingAreas || []).forEach(a => {
+          map[a._id] = {
+            Car: Number(a.carSlots || 0),
+            Bike: Number(a.bikeSlots || 0),
+            Van: Number(a.vanSlots || 0),
+            'Three-wheeler': Number(a.threeWheelerSlots || 0)
+          };
+        });
+        setAreaTypeMap(map);
+      } catch (e) {
+        // non-fatal for UI; fallback will be server-side filtering or slot vehicleType
+        console.warn('Could not fetch per-type slot counts:', e);
+      }
+    };
+    if (user?.email) fetchAreasWithCounts();
+    return () => { ignore = true; };
+  }, [API_URL, authHeader, user?.email]);
 
   const handleParkingAreaChange = async (parkingAreaId) => {
     if (!parkingAreaId) {
@@ -292,6 +328,17 @@ const AdminSlotManagementPage = () => {
       <SelectSlotPopup
         isOpen={showSlotPopup}
         slots={availableSlots}
+        vehicleType={registerForm.vehicleType}
+        typeDistribution={areaTypeMap[selectedParkingArea || registerForm.parkingAreaId]}
+        slotNumberBase={(() => {
+          const area = parkingAreas.find(a => a._id === (selectedParkingArea || registerForm.parkingAreaId));
+          if (!area || !Array.isArray(area.slots) || area.slots.length === 0) return undefined;
+          let min = Infinity;
+          for (const s of area.slots) {
+            if (typeof s.slotNumber === 'number' && s.slotNumber < min) min = s.slotNumber;
+          }
+          return Number.isFinite(min) ? min : undefined;
+        })()}
         onClose={() => setShowSlotPopup(false)}
         onSelect={(slotNum) => {
           setRegisterForm(prev => ({ ...prev, slotNumber: slotNum }));
