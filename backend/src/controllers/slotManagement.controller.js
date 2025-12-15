@@ -2,6 +2,20 @@ import { Vehicle } from '../models/Vehicle.js';
 import { ParkingArea } from '../models/ParkingArea.js';
 import { User } from '../models/User.js';
 
+const CANON_TYPES = ['Car', 'Bike', 'Van', 'Three-wheeler'];
+function normalizeType(input) {
+  const t = String(input || '').trim().toLowerCase();
+  if (!t) return null;
+  if (t === 'car') return 'Car';
+  if (t === 'bike' || t === 'bicycle' || t === 'scooter') return 'Bike';
+  if (t === 'van' || t === 'truck') return 'Van';
+  if (t === 'suv') return 'Car';
+  if (t === 'three-wheeler' || t === 'three wheeler' || t === 'auto' || t === 'rickshaw') return 'Three-wheeler';
+  // fallback: if matches canon with case variations
+  const canon = CANON_TYPES.find(ct => ct.toLowerCase() === t);
+  return canon || null;
+}
+
 // Get all parking areas with available slots
 export async function getParkingAreasWithSlots(req, res) {
   try {
@@ -20,6 +34,7 @@ export async function getParkingAreasWithSlots(req, res) {
 export async function getAvailableSlots(req, res) {
   try {
     const { parkingAreaId } = req.params;
+    const requestedType = normalizeType(req.query.vehicleType);
     
     const parkingArea = await ParkingArea.findById(parkingAreaId)
       .select('name totalSlots availableSlots occupiedSlots slots');
@@ -31,12 +46,29 @@ export async function getAvailableSlots(req, res) {
     // Auto-initialize slots if they haven't been set up yet
     if (!parkingArea.slots || parkingArea.slots.length === 0) {
       const slots = [];
-      for (let i = 1; i <= parkingArea.totalSlots; i++) {
+      const carCount = Number(parkingArea.carSlots || 0);
+      const bikeCount = Number(parkingArea.bikeSlots || 0);
+      const vanCount = Number(parkingArea.vanSlots || 0);
+      const threeCount = Number(parkingArea.threeWheelerSlots || 0);
+      const sum = carCount + bikeCount + vanCount + threeCount;
+      const total = parkingArea.totalSlots || sum || 0;
+
+      const typedLayout = [];
+      if (sum > 0) {
+        typedLayout.push(...Array.from({ length: carCount }, () => 'Car'));
+        typedLayout.push(...Array.from({ length: bikeCount }, () => 'Bike'));
+        typedLayout.push(...Array.from({ length: vanCount }, () => 'Van'));
+        typedLayout.push(...Array.from({ length: threeCount }, () => 'Three-wheeler'));
+      }
+
+      for (let i = 1; i <= total; i++) {
+        const vt = typedLayout[i - 1] || 'Car';
         slots.push({
           slotNumber: i,
           isOccupied: false,
           vehicleId: null,
-          occupiedAt: null
+          occupiedAt: null,
+          vehicleType: vt
         });
       }
 
@@ -79,11 +111,15 @@ export async function getAvailableSlots(req, res) {
 
     await parkingArea.save();
 
-    const availableSlots = parkingArea.slots
-      .filter(slot => !slot.isOccupied)
+    let availableSlots = parkingArea.slots.filter(slot => !slot.isOccupied);
+    if (requestedType) {
+      availableSlots = availableSlots.filter(s => normalizeType(s.vehicleType) === requestedType || !s.vehicleType);
+    }
+    availableSlots = availableSlots
       .map(slot => ({
         slotNumber: slot.slotNumber,
-        isOccupied: slot.isOccupied
+        isOccupied: slot.isOccupied,
+        vehicleType: slot.vehicleType || 'Car'
       }))
       .sort((a, b) => a.slotNumber - b.slotNumber);
 
@@ -144,6 +180,15 @@ export async function registerUserAndAssignSlot(req, res) {
 
     if (slot.isOccupied) {
       return res.status(400).json({ error: 'Slot is already occupied' });
+    }
+
+    // Enforce vehicle type-slot type compatibility if slot has a type
+    const normalizedVehicleType = normalizeType(vehicleType) || 'Car';
+    if (slot.vehicleType) {
+      const normalizedSlotType = normalizeType(slot.vehicleType) || 'Car';
+      if (normalizedSlotType !== normalizedVehicleType) {
+        return res.status(400).json({ error: `Selected slot is for ${normalizedSlotType} vehicles. Please choose a matching slot.` });
+      }
     }
 
     // Check if parking area has available slots

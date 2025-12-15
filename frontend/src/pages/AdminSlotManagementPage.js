@@ -42,11 +42,23 @@ const AdminSlotManagementPage = () => {
     }
 
     try {
-      const data = await getAvailableSlots(parkingAreaId);
+      const data = await getAvailableSlots(parkingAreaId, registerForm.vehicleType);
       setAvailableSlots(data.availableSlots);
       setRegisterForm(prev => ({ ...prev, parkingAreaId, slotNumber: '' }));
     } catch (err) {
       console.error('Error fetching available slots:', err);
+    }
+  };
+  
+  const handleVehicleTypeChange = async (vehicleType) => {
+    setRegisterForm(prev => ({ ...prev, vehicleType, slotNumber: '' }));
+    if (selectedParkingArea) {
+      try {
+        const data = await getAvailableSlots(selectedParkingArea, vehicleType);
+        setAvailableSlots(data.availableSlots);
+      } catch (err) {
+        console.error('Error fetching available slots:', err);
+      }
     }
   };
 
@@ -176,7 +188,7 @@ const AdminSlotManagementPage = () => {
                       className="flex-1 px-4 py-2 rounded-lg border border-input bg-muted"
                       required
                     />
-                    <Button type="button" variant="outline" onClick={() => setShowSlotPopup(true)} disabled={!selectedParkingArea}>
+                    <Button type="button" variant="outline" onClick={async () => { if (selectedParkingArea) { try { const data = await getAvailableSlots(selectedParkingArea, registerForm.vehicleType); setAvailableSlots(data.availableSlots); } catch(_){} } setShowSlotPopup(true); }} disabled={!selectedParkingArea}>
                       Select Slot
                     </Button>
                   </div>
@@ -190,12 +202,13 @@ const AdminSlotManagementPage = () => {
                   />
                   <select
                     value={registerForm.vehicleType}
-                    onChange={(e) => setRegisterForm({...registerForm, vehicleType: e.target.value})}
+                    onChange={(e) => handleVehicleTypeChange(e.target.value)}
                     className="px-4 py-2 rounded-lg border border-input bg-background"
                   >
                     <option value="Car">Car</option>
                     <option value="Bike">Bike</option>
-                    <option value="Truck">Truck</option>
+                    <option value="Van">Van</option>
+                    <option value="Three-wheeler">Three-wheeler</option>
                   </select>
                   <input
                     placeholder="User Name"
