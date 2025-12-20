@@ -12,7 +12,8 @@ const Footer = () => {
     setLoading(true);
     window.scrollTo({ top: 0, behavior: 'auto' });
   };
-
+  
+// Footer component with company info, quick links, and contact details
   return (
     <footer className="bg-slate-950 text-slate-200 mt-auto border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
