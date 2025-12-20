@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Car, Bike, Bus, Truck } from 'lucide-react';
 
+// Component to display current parking charges
 const getVehicleIcon = (type = '') => {
   const key = type.toLowerCase();
   if (key.includes('car') || key.includes('suv')) return <Car className="h-5 w-5" />;
@@ -9,6 +10,7 @@ const getVehicleIcon = (type = '') => {
   return <Truck className="h-5 w-5" />;
 };
 
+// ParkingChargesDisplay component fetches and displays parking rates
 const ParkingChargesDisplay = ({ compact = false, showHeading = true }) => {
   const [parkingCharges, setParkingCharges] = useState([]);
   const [loading, setLoading] = useState(true);
