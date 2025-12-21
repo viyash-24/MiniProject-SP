@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+// AboutUsPage component providing information about the Smart Parking application
 const AboutUsPage = () => {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 page-fade-in">
