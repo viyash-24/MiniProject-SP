@@ -6,7 +6,6 @@ import ParkingChargesDisplay from '../components/ParkingChargesDisplay';
 import { motion } from 'framer-motion';
 import { ArrowRight, CheckCircle2, Shield, Clock, MapPin, Smartphone, CreditCard } from 'lucide-react';
 
-// HomePage component serving as the landing page for the Smart Parking application
 const features = [
   { 
     icon: Clock,
