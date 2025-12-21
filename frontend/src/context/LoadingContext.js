@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
+// LoadingContext to manage global loading state
 const LoadingContext = createContext();
 
 export const LoadingProvider = ({ children }) => {
