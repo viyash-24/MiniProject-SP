@@ -6,7 +6,6 @@ const useSlotManagement = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Base API URL from environment variable
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
   const fetchParkingAreas = async () => {
