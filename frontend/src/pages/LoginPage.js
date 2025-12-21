@@ -34,7 +34,8 @@ const LoginPage = () => {
       setLoading(false);
     }
   };
-  // Google Sign-In handler
+
+  // Handle Google sign-in
   const onGoogle = async () => {
     try {
       await loginWithGoogle();

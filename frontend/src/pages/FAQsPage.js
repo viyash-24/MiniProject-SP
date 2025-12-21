@@ -28,6 +28,7 @@ const FAQItem = ({ question, answer }) => {
   );
 };
 
+// FAQsPage component displaying a list of frequently asked questions
 const FAQsPage = () => {
   const faqs = [
     {

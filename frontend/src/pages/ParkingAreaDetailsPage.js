@@ -34,6 +34,7 @@ const ParkingAreaDetailsPage = () => {
       return;
     }
 
+    //
     const fetchParkingArea = async () => {
       setIsLoading(true);
       try {

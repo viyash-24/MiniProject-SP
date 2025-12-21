@@ -39,8 +39,6 @@ const getAuthHeader = useCallback(() => {
   return headers;
 }, [user]);
 
- 
-
   const fetchParkingAreas = useCallback(async () => {
     if (!user) return;
     
