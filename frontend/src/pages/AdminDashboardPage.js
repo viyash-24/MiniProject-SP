@@ -8,7 +8,6 @@ import MapPicker from "../components/MapPicker";
 import useStats from "../hooks/useStats";
 import StatsCard from "../components/StatsCard";
 
-// TabButton component for tab navigation
 const TabButton = ({ active, onClick, children }) => (
   <button
     onClick={onClick}
