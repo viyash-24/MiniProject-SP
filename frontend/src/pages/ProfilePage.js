@@ -4,14 +4,7 @@ import { auth } from '../firebase';
 import { updateProfile, updateEmail, updatePassword } from 'firebase/auth';
 import toast from 'react-hot-toast';
 
-
-
-
-
-
-
-
-
+// ProfilePage component for editing user profile information
 const ProfilePage = () => {
 
   const { user } = useAuth();

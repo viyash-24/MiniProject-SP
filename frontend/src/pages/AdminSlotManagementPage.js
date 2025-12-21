@@ -6,6 +6,7 @@ import { LayoutDashboard, RefreshCw, Plus, LogOut, Car, AlertCircle } from 'luci
 import { Button } from '../components/ui/button';
 import { useAuth } from '../context/AuthContext';
 
+// AdminSlotManagementPage component for managing parking slots
 const AdminSlotManagementPage = () => {
   const {
     parkingAreas,

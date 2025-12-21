@@ -10,6 +10,7 @@ const stripePromise = loadStripe(
     'pk_test_51RmDSjPrn4yDohxSkl5YV6mJzkaSPclh2x8CLIezDjDieRPyDAs65Le8T39u2EVIfzT9Ee3bCObxKfAcU7X4uJlg00Le36dWLJ'
 );
 
+// PaymentPage component for handling parking payments
 const PaymentPage = () => {
   const { user } = useAuth();
   const [clientSecret, setClientSecret] = useState('');

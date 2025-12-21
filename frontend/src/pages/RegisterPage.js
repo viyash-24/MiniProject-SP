@@ -16,6 +16,7 @@ const RegisterPage = () => {
     password: ''
   });
 
+  // Error state for displaying registration errors
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);

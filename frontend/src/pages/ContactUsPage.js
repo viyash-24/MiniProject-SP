@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
 
+// ContactUsPage component providing a contact form and information
 const ContactUsPage = () => {
   const [formData, setFormData] = useState({
     name: '',
