@@ -6,6 +6,7 @@ const ProtectedRoute = ({ children, requireAdmin = false, disallowAdmin = false 
   const { user, isAdmin, loading } = useAuth();
   const location = useLocation();
 
+  // Determine if the user has admin access, considering both Firestore role and environment variable override
   const adminEmailEnv = (process.env.REACT_APP_ADMIN_EMAIL || '').toLowerCase();
   const emailMatchesEnv = (user?.email || '').toLowerCase() === adminEmailEnv && !!adminEmailEnv;
   const hasAdminAccess = isAdmin || emailMatchesEnv;
