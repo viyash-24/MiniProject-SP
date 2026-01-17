@@ -1,11 +1,11 @@
 import { ParkingArea } from '../models/ParkingArea.js';
 import { User } from '../models/User.js';
 import { Vehicle } from '../models/Vehicle.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
 
-export async function getDashboardStats(req, res) {
-  try {
-    // Get total parking areas
-    const totalParkingAreas = await ParkingArea.countDocuments();
+export const getDashboardStats = asyncHandler(async (req, res) => {
+  // Get total parking areas
+  const totalParkingAreas = await ParkingArea.countDocuments();
     
     // Get daily active users (users who logged in today)
     const today = new Date();
@@ -57,17 +57,13 @@ export async function getDashboardStats(req, res) {
     ]);
     const todayRevenue = todayRevenueResult.length > 0 ? todayRevenueResult[0].total : 0;
     
-    res.json({
-      totalParkingAreas,
-      dailyActiveUsers,
-      totalUsers,
-      totalVehicles,
-      todayVehicles,
-      totalRevenue,
-      todayRevenue
-    });
-  } catch (error) {
-    console.error('Error fetching dashboard stats:', error);
-    res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
-  }
-}
+  res.json({
+    totalParkingAreas,
+    dailyActiveUsers,
+    totalUsers,
+    totalVehicles,
+    todayVehicles,
+    totalRevenue,
+    todayRevenue
+  });
+});
