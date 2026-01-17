@@ -7,6 +7,9 @@ import { nanoid } from 'nanoid';
 import nodemailer from 'nodemailer';
 import { env } from '../config/env.js';
 import { io } from '../index.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError } from '../utils/AppError.js';
+import { isValidEmail, isValidPhone, isValidPlate, normalizeEmail, normalizePhone, normalizePlate } from '../utils/validation.js';
 
 async function sendEmail(to, subject, html) {
   try {
@@ -19,35 +22,45 @@ async function sendEmail(to, subject, html) {
   } catch (_) {}
 }
 
-export async function listVehicles(_req, res) {
+export const listVehicles = asyncHandler(async (_req, res) => {
   const vehicles = await Vehicle.find().sort({ createdAt: -1 });
   res.json({ vehicles });
-}
+});
 
-export async function createVehicle(req, res) {
-  const { plate, userEmail, userName, userPhone, vehicleType = 'Car', parkingAreaId } = req.body;
+export const createVehicle = asyncHandler(async (req, res) => {
+  const { plate, userEmail, userName, userPhone, vehicleType = 'Car', parkingAreaId } = req.body || {};
 
   // Validate vehicle type
-  const validVehicleTypes = ['Car', 'Bike', 'Truck', 'Scooter', 'Bicycle', 'Other'];
+  const validVehicleTypes = ['Car', 'Bike', 'Van', 'SUV', 'Truck', 'Scooter', 'Bicycle', 'Auto', 'Three-wheeler', 'Other'];
   if (!validVehicleTypes.includes(vehicleType)) {
-    return res.status(400).json({ error: 'Invalid vehicle type' });
+    throw new AppError(400, 'Invalid vehicle type', 'INVALID_VEHICLE_TYPE');
   }
 
   // Validate required fields
-  if (!plate) {
-    return res.status(400).json({ error: 'Plate number is required' });
+  if (!plate) throw new AppError(400, 'Plate number is required', 'MISSING_FIELDS', { required: ['plate'] });
+  if (!isValidPlate(plate)) throw new AppError(400, 'Invalid plate number', 'INVALID_PLATE');
+
+  const normalizedEmail = userEmail ? normalizeEmail(userEmail) : undefined;
+  if (normalizedEmail && !isValidEmail(normalizedEmail)) {
+    throw new AppError(400, 'Invalid email address', 'INVALID_EMAIL');
   }
+  if (!isValidPhone(userPhone)) {
+    throw new AppError(400, 'Invalid phone number', 'INVALID_PHONE');
+  }
+  const normalizedPhone = userPhone ? normalizePhone(userPhone) : undefined;
 
   // Check if vehicle with same plate already exists and is active
   const existingVehicle = await Vehicle.findOne({
-    plate: (plate||'').toUpperCase(),
+    plate: normalizePlate(plate),
     status: { $in: ['Parked', 'Paid'] }
   });
 
   if (existingVehicle) {
-    return res.status(400).json({
-      error: `Vehicle with plate ${plate} is already parked. Please exit the vehicle before registering again.`
-    });
+    throw new AppError(
+      400,
+      `Vehicle with plate ${plate} is already parked. Please exit the vehicle before registering again.`,
+      'VEHICLE_ALREADY_PARKED'
+    );
   }
 
   // Find parking area and check availability
@@ -55,7 +68,7 @@ export async function createVehicle(req, res) {
   if (parkingAreaId) {
     parkingArea = await ParkingArea.findById(parkingAreaId);
     if (!parkingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
+      throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
     }
 
     // Ensure availableSlots is properly set
@@ -65,7 +78,7 @@ export async function createVehicle(req, res) {
     }
 
     if (parkingArea.availableSlots <= 0) {
-      return res.status(400).json({ error: 'No available slots in this parking area' });
+      throw new AppError(400, 'No available slots in this parking area', 'NO_AVAILABLE_SLOTS');
     }
   }
 
@@ -76,10 +89,10 @@ export async function createVehicle(req, res) {
   }
 
   const v = await Vehicle.create({
-    plate: (plate||'').toUpperCase(),
-    userEmail: userEmail || undefined,
+    plate: normalizePlate(plate),
+    userEmail: normalizedEmail || undefined,
     userName: userName || undefined,
-    userPhone: userPhone || undefined,
+    userPhone: normalizedPhone || undefined,
     vehicleType,
     parkingAreaId: parkingArea ? parkingArea._id : null,
     slotNumber: slotNumber,
@@ -102,63 +115,57 @@ export async function createVehicle(req, res) {
   }
 
   res.json({ vehicle: v });
-}
+});
 
-export async function searchVehicles(req, res) {
+export const searchVehicles = asyncHandler(async (req, res) => {
   const { plate } = req.params;
+  if (!plate) throw new AppError(400, 'plate is required', 'MISSING_FIELDS', { required: ['plate'] });
 
-  try {
-    // Search vehicles by plate number (case-insensitive partial match)
-    const vehicles = await Vehicle.find({
-      plate: { $regex: plate, $options: 'i' }
-    })
+  const vehicles = await Vehicle.find({
+    plate: { $regex: plate, $options: 'i' }
+  })
     .populate('parkingAreaId', 'name')
     .sort({ createdAt: -1 })
-    .limit(10); // Limit results to prevent overwhelming response
+    .limit(10);
 
-    res.json({ vehicles });
-  } catch (error) {
-    console.error('Error searching vehicles:', error);
-    res.status(500).json({ error: 'Failed to search vehicles' });
-  }
-}
+  res.json({ vehicles });
+});
 
-export async function markPaid(req, res) {
+export const markPaid = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { method = 'Cash' } = req.body;
   const v = await Vehicle.findById(id);
-  if (!v) return res.status(404).json({ error: 'Vehicle not found' });
+  if (!v) throw new AppError(404, 'Vehicle not found', 'VEHICLE_NOT_FOUND');
 
   // Resolve amount from active parking charges based on vehicle type
   let amount = null;
 
-try {
   if (v.vehicleType) {
     const targetType = String(v.vehicleType).trim().toLowerCase();
 
     const charge = await ParkingCharge.findOne({
-      vehicleType: new RegExp(`^${targetType}$`, "i"),
+      vehicleType: new RegExp(`^${targetType}$`, 'i'),
       isActive: true
     }).lean();
 
     if (!charge) {
-      return res.status(400).json({
-        error: `No parking charge defined for vehicle type: ${v.vehicleType}. Admin must set a price before payment.`
-      });
+      throw new AppError(
+        400,
+        `No parking charge defined for vehicle type: ${v.vehicleType}. Admin must set a price before payment.`,
+        'PARKING_CHARGE_NOT_FOUND'
+      );
     }
 
     amount = Number(charge.amount);
   }
-} catch (err) {
-  console.error("Charge load error:", err?.message || err);
-  return res.status(500).json({ error: "Failed to resolve parking charge" });
-}
 
-if (!amount || amount <= 0) {
-  return res.status(400).json({
-    error: `Invalid parking charge amount for ${v.vehicleType}. Admin must set a valid price.`
-  });
-}
+  if (!amount || amount <= 0) {
+    throw new AppError(
+      400,
+      `Invalid parking charge amount for ${v.vehicleType}. Admin must set a valid price.`,
+      'INVALID_PARKING_CHARGE'
+    );
+  }
   v.paymentStatus = 'Paid';
   v.status = 'Paid';
   await v.save();
@@ -192,12 +199,12 @@ if (!amount || amount <= 0) {
   }
 
   res.json({ vehicle: v, payment: p });
-}
+});
 
-export async function exitVehicle(req, res) {
+export const exitVehicle = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const v = await Vehicle.findById(id);
-  if (!v) return res.status(404).json({ error: 'Vehicle not found' });
+  if (!v) throw new AppError(404, 'Vehicle not found', 'VEHICLE_NOT_FOUND');
 
   // Update vehicle status
   v.status = 'Exited';
@@ -232,4 +239,4 @@ export async function exitVehicle(req, res) {
   }
 
   res.json({ vehicle: v });
-}
+});
