@@ -1,6 +1,10 @@
 import { Vehicle } from '../models/Vehicle.js';
 import { ParkingArea } from '../models/ParkingArea.js';
 import { User } from '../models/User.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError } from '../utils/AppError.js';
+import { isValidEmail, isValidPhone, isValidPlate, normalizeEmail, normalizePhone, normalizePlate } from '../utils/validation.js';
+import { hashPassword } from '../utils/passwords.js';
 
 const CANON_TYPES = ['Car', 'Bike', 'Van', 'Three-wheeler'];
 function normalizeType(input) {
@@ -17,31 +21,25 @@ function normalizeType(input) {
 }
 
 // Get all parking areas with available slots
-export async function getParkingAreasWithSlots(req, res) {
-  try {
-    const parkingAreas = await ParkingArea.find({ active: true })
-      .select('name address totalSlots availableSlots occupiedSlots slots')
-      .sort({ name: 1 });
+export const getParkingAreasWithSlots = asyncHandler(async (req, res) => {
+  const parkingAreas = await ParkingArea.find({ active: true })
+    .select('name address totalSlots availableSlots occupiedSlots slots')
+    .sort({ name: 1 });
 
-    res.json({ parkingAreas });
-  } catch (error) {
-    console.error('Error fetching parking areas:', error);
-    res.status(500).json({ error: 'Failed to fetch parking areas' });
-  }
-}
+  res.json({ parkingAreas });
+});
 
 // Get available slots for a specific parking area
-export async function getAvailableSlots(req, res) {
-  try {
-    const { parkingAreaId } = req.params;
-    const requestedType = normalizeType(req.query.vehicleType);
-    
-    const parkingArea = await ParkingArea.findById(parkingAreaId)
-      .select('name totalSlots availableSlots occupiedSlots slots carSlots bikeSlots vanSlots threeWheelerSlots');
-    
-    if (!parkingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
-    }
+export const getAvailableSlots = asyncHandler(async (req, res) => {
+  const { parkingAreaId } = req.params;
+  const requestedType = normalizeType(req.query.vehicleType);
+  
+  const parkingArea = await ParkingArea.findById(parkingAreaId)
+    .select('name totalSlots availableSlots occupiedSlots slots carSlots bikeSlots vanSlots threeWheelerSlots');
+  
+  if (!parkingArea) {
+    throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
+  }
 
     // Auto-initialize slots if they haven't been set up yet
     if (!parkingArea.slots || parkingArea.slots.length === 0) {
@@ -166,30 +164,38 @@ export async function getAvailableSlots(req, res) {
       },
       availableSlots
     });
-  } catch (error) {
-    console.error('Error fetching available slots:', error);
-    res.status(500).json({ error: 'Failed to fetch available slots' });
-  }
-}
+});
 
 // Register user and assign slot
-export async function registerUserAndAssignSlot(req, res) {
-  try {
-    const {
-      plate,
-      userEmail,
-      userName,
-      userPhone,
-      vehicleType,
-      parkingAreaId,
-      slotNumber,
-      createdBy
-    } = req.body;
+export const registerUserAndAssignSlot = asyncHandler(async (req, res) => {
+  const {
+    plate,
+    userEmail,
+    userName,
+    userPhone,
+    vehicleType,
+    parkingAreaId,
+    slotNumber,
+    createdBy
+  } = req.body || {};
 
     // Validate required fields
     if (!plate || !userName || !userEmail || !parkingAreaId || !slotNumber) {
-      return res.status(400).json({ error: 'Missing required fields' });
+      throw new AppError(400, 'Missing required fields', 'MISSING_FIELDS');
     }
+
+    const normalizedEmail = normalizeEmail(userEmail);
+    if (!isValidEmail(normalizedEmail)) {
+      throw new AppError(400, 'Invalid email address', 'INVALID_EMAIL');
+    }
+    if (!isValidPhone(userPhone)) {
+      throw new AppError(400, 'Invalid phone number', 'INVALID_PHONE');
+    }
+    if (!isValidPlate(plate)) {
+      throw new AppError(400, 'Invalid plate number', 'INVALID_PLATE');
+    }
+    const normalizedPhone = userPhone ? normalizePhone(userPhone) : undefined;
+    const normalizedPlate = normalizePlate(plate);
 
     // Check if vehicle already exists and is currently parked
     const existingVehicle = await Vehicle.findOne({ 
@@ -197,23 +203,28 @@ export async function registerUserAndAssignSlot(req, res) {
       status: { $in: ['Parked', 'Paid'] } 
     });
     if (existingVehicle) {
-      return res.status(400).json({ error: 'Vehicle is already parked' });
+      throw new AppError(400, 'Vehicle is already parked', 'VEHICLE_ALREADY_PARKED');
     }
 
     // Get parking area and check slot availability
     const parkingArea = await ParkingArea.findById(parkingAreaId);
     if (!parkingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
+      throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
     }
 
     // Check if slot is available
-    const slot = parkingArea.slots.find(s => s.slotNumber === slotNumber);
+    const slotNo = Number(slotNumber);
+    if (!Number.isFinite(slotNo) || slotNo <= 0) {
+      throw new AppError(400, 'Invalid slot number', 'INVALID_SLOT_NUMBER');
+    }
+
+    const slot = parkingArea.slots.find(s => s.slotNumber === slotNo);
     if (!slot) {
-      return res.status(400).json({ error: 'Invalid slot number' });
+      throw new AppError(400, 'Invalid slot number', 'INVALID_SLOT_NUMBER');
     }
 
     if (slot.isOccupied) {
-      return res.status(400).json({ error: 'Slot is already occupied' });
+      throw new AppError(400, 'Slot is already occupied', 'SLOT_OCCUPIED');
     }
 
     // Enforce vehicle type-slot type compatibility if slot has a type
@@ -221,37 +232,38 @@ export async function registerUserAndAssignSlot(req, res) {
     if (slot.vehicleType) {
       const normalizedSlotType = normalizeType(slot.vehicleType) || 'Car';
       if (normalizedSlotType !== normalizedVehicleType) {
-        return res.status(400).json({ error: `Selected slot is for ${normalizedSlotType} vehicles. Please choose a matching slot.` });
+        throw new AppError(400, `Selected slot is for ${normalizedSlotType} vehicles. Please choose a matching slot.`, 'SLOT_TYPE_MISMATCH');
       }
     }
 
     // Check if parking area has available slots
     if (parkingArea.availableSlots <= 0) {
-      return res.status(400).json({ error: 'No available slots in this parking area' });
+      throw new AppError(400, 'No available slots in this parking area', 'NO_AVAILABLE_SLOTS');
     }
 
     // Create or find user
-    let user = await User.findOne({ email: userEmail });
+    let user = await User.findOne({ email: normalizedEmail });
     if (!user) {
+      const passwordHash = await hashPassword('default123');
       user = await User.create({
         name: userName,
-        email: userEmail,
-        phone: userPhone,
+        email: normalizedEmail,
+        phone: normalizedPhone,
         role: 'user',
-        password: 'default123' // You might want to generate a random password
+        passwordHash,
       });
     }
 
     // Create vehicle record
     const vehicle = await Vehicle.create({
-      plate,
+      plate: normalizedPlate,
       userId: user._id,
-      userEmail,
+      userEmail: normalizedEmail,
       userName,
-      userPhone,
+      userPhone: normalizedPhone,
       vehicleType: vehicleType || 'Car',
       parkingAreaId,
-      slotNumber,
+      slotNumber: slotNo,
       status: 'Parked',
       paymentStatus: 'Unpaid',
       createdBy
@@ -284,33 +296,28 @@ export async function registerUserAndAssignSlot(req, res) {
         occupiedSlots: parkingArea.occupiedSlots
       }
     });
-  } catch (error) {
-    console.error('Error registering user and assigning slot:', error);
-    res.status(500).json({ error: 'Failed to register user and assign slot' });
-  }
-}
+});
 
 // Exit user and free slot
-export async function exitUserAndFreeSlot(req, res) {
-  try {
-    const { vehicleId } = req.params;
-    const { exitTime } = req.body;
+export const exitUserAndFreeSlot = asyncHandler(async (req, res) => {
+  const { vehicleId } = req.params;
+  const { exitTime } = req.body || {};
 
     // Find the vehicle
     const vehicle = await Vehicle.findById(vehicleId);
     
     if (!vehicle) {
-      return res.status(404).json({ error: 'Vehicle not found' });
+      throw new AppError(404, 'Vehicle not found', 'VEHICLE_NOT_FOUND');
     }
 
     if (vehicle.status === 'Exited') {
-      return res.status(400).json({ error: 'Vehicle has already exited' });
+      throw new AppError(400, 'Vehicle has already exited', 'VEHICLE_ALREADY_EXITED');
     }
 
     // Get the parking area
     const parkingArea = await ParkingArea.findById(vehicle.parkingAreaId);
     if (!parkingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
+      throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
     }
 
     // Update vehicle status
@@ -355,36 +362,26 @@ export async function exitUserAndFreeSlot(req, res) {
         occupiedSlots: parkingArea.occupiedSlots
       }
     });
-  } catch (error) {
-    console.error('Error exiting user and freeing slot:', error);
-    res.status(500).json({ error: 'Failed to exit user and free slot' });
-  }
-}
+});
 
 // Get current vehicles in parking
-export async function getCurrentVehicles(req, res) {
-  try {
-    const vehicles = await Vehicle.find({ status: { $in: ['Parked', 'Paid'] } })
-      .populate('parkingAreaId', 'name address')
-      .populate('userId', 'name email phone')
-      .sort({ entryTime: -1 });
+export const getCurrentVehicles = asyncHandler(async (req, res) => {
+  const vehicles = await Vehicle.find({ status: { $in: ['Parked', 'Paid'] } })
+    .populate('parkingAreaId', 'name address')
+    .populate('userId', 'name email phone')
+    .sort({ entryTime: -1 });
 
-    res.json({ vehicles });
-  } catch (error) {
-    console.error('Error fetching current vehicles:', error);
-    res.status(500).json({ error: 'Failed to fetch current vehicles' });
-  }
-}
+  res.json({ vehicles });
+});
 
 // Initialize parking area slots
-export async function initializeParkingAreaSlots(req, res) {
-  try {
-    const { parkingAreaId } = req.params;
+export const initializeParkingAreaSlots = asyncHandler(async (req, res) => {
+  const { parkingAreaId } = req.params;
 
-    const parkingArea = await ParkingArea.findById(parkingAreaId);
-    if (!parkingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
-    }
+  const parkingArea = await ParkingArea.findById(parkingAreaId);
+  if (!parkingArea) {
+    throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
+  }
 
     // Initialize slots array if not exists
     if (!parkingArea.slots || parkingArea.slots.length === 0) {
@@ -416,21 +413,16 @@ export async function initializeParkingAreaSlots(req, res) {
         slots: parkingArea.slots
       }
     });
-  } catch (error) {
-    console.error('Error initializing parking area slots:', error);
-    res.status(500).json({ error: 'Failed to initialize parking area slots' });
-  }
-}
+});
 
 // Recalculate slot counts for a parking area
-export async function recalculateSlotCounts(req, res) {
-  try {
-    const { parkingAreaId } = req.params;
+export const recalculateSlotCounts = asyncHandler(async (req, res) => {
+  const { parkingAreaId } = req.params;
 
-    const parkingArea = await ParkingArea.findById(parkingAreaId);
-    if (!parkingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
-    }
+  const parkingArea = await ParkingArea.findById(parkingAreaId);
+  if (!parkingArea) {
+    throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
+  }
 
     // Count currently parked vehicles in this area
     const occupiedCount = await Vehicle.countDocuments({
@@ -467,8 +459,4 @@ export async function recalculateSlotCounts(req, res) {
         occupiedSlots: parkingArea.occupiedSlots
       }
     });
-  } catch (error) {
-    console.error('Error recalculating slot counts:', error);
-    res.status(500).json({ error: 'Failed to recalculate slot counts' });
-  }
-}
+});
