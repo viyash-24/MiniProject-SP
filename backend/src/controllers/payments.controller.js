@@ -4,6 +4,8 @@ import { ParkingCharge } from '../models/ParkingCharge.js';
 import Stripe from 'stripe';
 import { env } from '../config/env.js';
 import { sendPaymentReceiptEmail } from '../utils/email.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError } from '../utils/AppError.js';
 
 // Initialize Stripe with environment configuration
 let stripe;
@@ -30,75 +32,71 @@ async function sendEmail(details) {
   }
 }
 
-export async function listPayments(_req, res) {
-  const payments = await Payment.find().sort({ createdAt: -1 });
-  res.json({ payments });
-}
-
-export async function createPaymentIntent(req, res) {
+export const createPaymentIntent = asyncHandler(async (req, res) => {
   const { vehicleId } = req.body;
 
   console.log(' Fast payment intent creation for vehicleId:', vehicleId);
 
   if (!stripe) {
     console.error(' Stripe not initialized');
-    return res.status(500).json({ error: 'Payment system not configured' });
+    throw new AppError(503, 'Payment system not configured', 'PAYMENTS_UNAVAILABLE');
+  }
+  if (!vehicleId) {
+    throw new AppError(400, 'vehicleId is required', 'MISSING_FIELDS', { required: ['vehicleId'] });
   }
 
-  try {
-    let vehicleData;
-    if (vehicleId === 'test') {
-      vehicleData = {
-        _id: 'test',
-        plate: 'TEST-1234',
-        vehicleType: 'Car',
-        userEmail: 'test@example.com'
-      };
-    } else {
-      const vehicle = await Vehicle.findById(vehicleId)
-        .select('plate vehicleType userEmail userName userPhone')
-        .lean();
+  let vehicleData;
+  if (vehicleId === 'test') {
+    vehicleData = {
+      _id: 'test',
+      plate: 'TEST-1234',
+      vehicleType: 'Car',
+      userEmail: 'test@example.com'
+    };
+  } else {
+    const vehicle = await Vehicle.findById(vehicleId)
+      .select('plate vehicleType userEmail userName userPhone')
+      .lean();
 
-      if (!vehicle) {
-        return res.status(404).json({ error: 'Vehicle not found' });
-      }
-      vehicleData = vehicle;
+    if (!vehicle) {
+      throw new AppError(404, 'Vehicle not found', 'VEHICLE_NOT_FOUND');
     }
+    vehicleData = vehicle;
+  }
 
-    console.log(' Vehicle found:', vehicleData.plate);
+  console.log(' Vehicle found:', vehicleData.plate);
 
     // -----------------------------
     // FIXED CHARGE RESOLVER
     // -----------------------------
-   let amount = null;
+    let amount = null;
 
-try {
-  if (vehicleData.vehicleType) {
-    const targetType = String(vehicleData.vehicleType).trim().toLowerCase();
+    if (vehicleData.vehicleType) {
+      const targetType = String(vehicleData.vehicleType).trim().toLowerCase();
 
-    const charge = await ParkingCharge.findOne({
-      vehicleType: new RegExp(`^${targetType}$`, "i"),
-      isActive: true
-    }).lean();
+      const charge = await ParkingCharge.findOne({
+        vehicleType: new RegExp(`^${targetType}$`, 'i'),
+        isActive: true
+      }).lean();
 
-    if (!charge) {
-      return res.status(400).json({
-        error: `No parking charge defined for vehicle type: ${vehicleData.vehicleType}. Admin must set a price.`
-      });
+      if (!charge) {
+        throw new AppError(
+          400,
+          `No parking charge defined for vehicle type: ${vehicleData.vehicleType}. Admin must set a price.`,
+          'PARKING_CHARGE_NOT_FOUND'
+        );
+      }
+
+      amount = Number(charge.amount);
     }
 
-    amount = Number(charge.amount);
-  }
-} catch (err) {
-  console.error("Charge load error:", err?.message || err);
-  return res.status(500).json({ error: "Failed to resolve parking charge" });
-}
-
-if (!amount || amount <= 0) {
-  return res.status(400).json({
-    error: `Invalid parking charge amount for ${vehicleData.vehicleType}. Admin must set a valid price.`
-  });
-}
+    if (!amount || amount <= 0) {
+      throw new AppError(
+        400,
+        `Invalid parking charge amount for ${vehicleData.vehicleType}. Admin must set a valid price.`,
+        'INVALID_PARKING_CHARGE'
+      );
+    }
 
 
     const currency = 'lkr';
@@ -123,64 +121,66 @@ if (!amount || amount <= 0) {
       amount,
       currency: currency.toUpperCase()
     });
-  } catch (error) {
-    console.error(' Fast payment intent creation failed:', error);
-    res.status(500).json({ error: error.message });
-  }
-}
+});
 
-export async function confirmStripePayment(req, res) {
+export const confirmStripePayment = asyncHandler(async (req, res) => {
   const { paymentIntentId, vehicleId } = req.body;
-  if (!paymentIntentId || !vehicleId)
-    return res.status(400).json({ error: 'paymentIntentId and vehicleId are required' });
+  if (!stripe) throw new AppError(503, 'Payment system not configured', 'PAYMENTS_UNAVAILABLE');
+  if (!paymentIntentId || !vehicleId) {
+    throw new AppError(400, 'paymentIntentId and vehicleId are required', 'MISSING_FIELDS', {
+      required: ['paymentIntentId', 'vehicleId']
+    });
+  }
 
-  try {
-    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
-    if (!intent) return res.status(404).json({ error: 'PaymentIntent not found' });
-    if (intent.status !== 'succeeded')
-      return res.status(400).json({ error: `PaymentIntent not succeeded: ${intent.status}` });
+  const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+  if (!intent) throw new AppError(404, 'PaymentIntent not found', 'PAYMENT_INTENT_NOT_FOUND');
+  if (intent.status !== 'succeeded') {
+    throw new AppError(400, `PaymentIntent not succeeded: ${intent.status}`, 'PAYMENT_NOT_SUCCEEDED', { status: intent.status });
+  }
 
-    const v = await Vehicle.findById(vehicleId);
-    if (!v) return res.status(404).json({ error: 'Vehicle not found' });
+  const v = await Vehicle.findById(vehicleId);
+  if (!v) throw new AppError(404, 'Vehicle not found', 'VEHICLE_NOT_FOUND');
 
-    v.paymentStatus = 'Paid';
-    v.status = 'Paid';
-    await v.save();
+  v.paymentStatus = 'Paid';
+  v.status = 'Paid';
+  await v.save();
 
-    const amount = (intent.amount_received ?? intent.amount) / 100;
+  const amount = (intent.amount_received ?? intent.amount) / 100;
 
-    const p = await Payment.create({
-      vehicleId: v._id,
-      userId: v.userId || undefined,
-      userEmail: v.userEmail || undefined,
-      userName: v.userName || undefined,
-      userPhone: v.userPhone || undefined,
+  const p = await Payment.create({
+    vehicleId: v._id,
+    userId: v.userId || undefined,
+    userEmail: v.userEmail || undefined,
+    userName: v.userName || undefined,
+    userPhone: v.userPhone || undefined,
+    vehiclePlate: v.plate,
+    vehicleType: v.vehicleType,
+    amount,
+    method: 'Stripe',
+    status: 'Success',
+    receiptId: intent.id,
+    paymentDate: new Date(),
+  });
+
+  if (v.userEmail) {
+    await sendEmail({
+      to: v.userEmail,
+      userName: v.userName,
+      amount,
+      transactionId: intent.id,
+      paymentDate: p.paymentDate || p.createdAt,
       vehiclePlate: v.plate,
       vehicleType: v.vehicleType,
-      amount,
+      slotNumber: v.slotNumber || null,
+      parkingAreaName: null,
       method: 'Stripe',
-      status: 'Success',
-      receiptId: intent.id,
-      paymentDate: new Date(),
     });
-
-    if (v.userEmail) {
-      await sendEmail({
-        to: v.userEmail,
-        userName: v.userName,
-        amount,
-        transactionId: intent.id,
-        paymentDate: p.paymentDate || p.createdAt,
-        vehiclePlate: v.plate,
-        vehicleType: v.vehicleType,
-        slotNumber: v.slotNumber || null,
-        parkingAreaName: null,
-        method: 'Stripe',
-      });
-    }
-
-    res.json({ vehicle: v, payment: p });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
-}
+
+  res.json({ vehicle: v, payment: p });
+});
+
+export const listPayments = asyncHandler(async (_req, res) => {
+  const payments = await Payment.find().sort({ createdAt: -1 });
+  res.json({ payments });
+});

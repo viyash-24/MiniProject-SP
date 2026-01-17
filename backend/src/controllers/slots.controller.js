@@ -1,15 +1,17 @@
 import { Slot } from '../models/Slot.js';
 import { io } from '../index.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError } from '../utils/AppError.js';
 
-export async function listSlots(_req, res) {
+export const listSlots = asyncHandler(async (_req, res) => {
   const slots = await Slot.find().sort({ name: 1 });
   res.json({ slots });
-}
+});
 
-export async function createSlot(req, res) {
+export const createSlot = asyncHandler(async (req, res) => {
   const { name, area, total = 0, free = 0 } = req.body;
   const exists = await Slot.findOne({ name });
-  if (exists) return res.status(400).json({ error: 'Slot exists' });
+  if (exists) throw new AppError(400, 'Slot exists', 'SLOT_EXISTS');
   
   const slot = await Slot.create({ name, area, total, free });
   
@@ -20,9 +22,9 @@ export async function createSlot(req, res) {
   });
   
   res.json({ slot });
-}
+});
 
-export async function updateSlot(req, res) {
+export const updateSlot = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { total, free, area, active } = req.body;
   
@@ -33,7 +35,7 @@ export async function updateSlot(req, res) {
   );
   
   if (!slot) {
-    return res.status(404).json({ error: 'Slot not found' });
+    throw new AppError(404, 'Slot not found', 'SLOT_NOT_FOUND');
   }
   
   // Emit socket event for updated slot
@@ -43,4 +45,4 @@ export async function updateSlot(req, res) {
   });
   
   res.json({ slot });
-}
+});
