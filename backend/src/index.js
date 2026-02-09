@@ -19,7 +19,7 @@ import publicParkingAreaRoutes from './routes/publicParkingAreas.routes.js';
 import statsRoutes from './routes/stats.routes.js';
 import slotManagementRoutes from './routes/slotManagement.routes.js';
 import parkingChargeRoutes from './routes/parkingCharges.routes.js';
-import { errorHandler } from './middleware/error.js';
+import { errorHandler, notFound } from './middleware/error.js';
 import { seedAdmin } from './utils/seed.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -80,6 +80,9 @@ app.use('/api/parking-charges', parkingChargeRoutes);
 
 // Serve uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// 404 handler
+app.use(notFound);
 
 // Error handler
 app.use(errorHandler);
