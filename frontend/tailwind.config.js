@@ -5,12 +5,13 @@ module.exports = {
     "./public/index.html",
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
+  
   theme: {
     extend: {
       fontFamily: {
         sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
         display: ['Lexend', 'ui-sans-serif', 'system-ui'],
-      }, // for extending font families
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",

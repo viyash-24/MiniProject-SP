@@ -72,6 +72,10 @@ const AdminDashboardPage = () => {
     photo: "",
   });
 
+  const [addFormErrors, setAddFormErrors] = useState({});
+  const [parkingAreaFormErrors, setParkingAreaFormErrors] = useState({});
+  const [chargeFormErrors, setChargeFormErrors] = useState({});
+
   const vehicleTypes = [
     "Car",
     "Bike",
@@ -251,20 +255,190 @@ const AdminDashboardPage = () => {
     }
   };
 
+  const isValidEmail = (email) => {
+    const v = String(email || '').trim();
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  };
+
+  const normalizePhone = (phone) => {
+    const raw = String(phone || '').trim();
+    if (!raw) return '';
+    const hasPlus = raw.startsWith('+');
+    const digits = raw.replace(/\D/g, '');
+    return (hasPlus ? '+' : '') + digits;
+  };
+
+  const isValidPhone = (phone) => {
+    const normalized = normalizePhone(phone);
+    if (!normalized) return true;
+    const digits = normalized.startsWith('+') ? normalized.slice(1) : normalized;
+    return /^\d{7,15}$/.test(digits);
+  };
+
+  const normalizePlate = (plate) => String(plate || '').trim().toUpperCase();
+  const isValidPlate = (plate) => /^[A-Z0-9-]{4,15}$/.test(normalizePlate(plate));
+
+  const isValidHttpUrl = (value) => {
+    const v = String(value || '').trim();
+    if (!v) return true;
+    try {
+      const url = new URL(v);
+      return url.protocol === 'http:' || url.protocol === 'https:';
+    } catch (_) {
+      return false;
+    }
+  };
+
+  const readApiError = async (res) => {
+    let data = {};
+    try {
+      data = await res.json();
+    } catch (_) {
+      data = {};
+    }
+    return {
+      message: data.error || data.message || res.statusText || 'Request failed',
+      code: data.code,
+      details: data.details,
+      data,
+    };
+  };
+
+  const applyApiErrorToAddForm = ({ code, message, details }) => {
+    const next = {};
+
+    if (code === 'INVALID_EMAIL') next.email = message;
+    if (code === 'INVALID_PHONE') next.phone = message;
+    if (code === 'INVALID_PLATE') next.plate = message;
+    if (code === 'INVALID_VEHICLE_TYPE') next.vehicleType = message;
+
+    if (code === 'MISSING_FIELDS' && details?.required) {
+      const req = details.required;
+      if (req.includes('name')) next.name = next.name || 'Name is required';
+      if (req.includes('email') || req.includes('to')) next.email = next.email || 'Email is required';
+      if (req.includes('plate')) next.plate = next.plate || 'Plate number is required';
+    }
+
+    // Mongoose validation details: [{ path, message, kind }]
+    if (code === 'VALIDATION_ERROR' && Array.isArray(details)) {
+      for (const d of details) {
+        const p = String(d?.path || '').toLowerCase();
+        if (p.includes('email')) next.email = next.email || (d.message || message);
+        if (p.includes('phone')) next.phone = next.phone || (d.message || message);
+        if (p.includes('plate')) next.plate = next.plate || (d.message || message);
+        if (p.includes('vehicletype')) next.vehicleType = next.vehicleType || (d.message || message);
+      }
+    }
+
+    if (Object.keys(next).length > 0) {
+      setAddFormErrors((prev) => ({ ...prev, ...next }));
+    }
+  };
+
+  const applyApiErrorToParkingAreaForm = ({ code, message, details }) => {
+    const next = {};
+
+    if (code === 'INVALID_LATITUDE') next.latitude = message;
+    if (code === 'INVALID_LONGITUDE') next.longitude = message;
+    if (code === 'INVALID_PHOTO_URL') next.photo = message;
+    if (code === 'INVALID_TOTAL_SLOTS') next.slotAmount = message;
+
+    if (code === 'INVALID_SLOT_COUNTS') {
+      const fields = details?.fields;
+      if (fields?.carSlots) next.carSlots = fields.carSlots;
+      if (fields?.bikeSlots) next.bikeSlots = fields.bikeSlots;
+      if (fields?.vanSlots) next.vanSlots = fields.vanSlots;
+      if (fields?.threeWheelerSlots) next.threeWheelerSlots = fields.threeWheelerSlots;
+      if (details?.message && !Object.keys(next).length) next.slotAmount = details.message;
+    }
+
+    if (code === 'MISSING_FIELDS' && details?.required) {
+      const req = details.required;
+      if (req.includes('name')) next.name = next.name || 'Area name is required';
+      if (req.includes('address')) next.address = next.address || 'Address is required';
+      if (req.includes('location') || req.includes('location.latitude')) next.latitude = next.latitude || 'Latitude is required';
+      if (req.includes('location') || req.includes('location.longitude')) next.longitude = next.longitude || 'Longitude is required';
+      if (req.includes('photo')) next.photo = next.photo || 'Photo URL is required';
+      if (req.includes('carSlots')) next.carSlots = next.carSlots || 'Car slots is required';
+      if (req.includes('bikeSlots')) next.bikeSlots = next.bikeSlots || 'Bike slots is required';
+      if (req.includes('vanSlots')) next.vanSlots = next.vanSlots || 'Van slots is required';
+      if (req.includes('threeWheelerSlots')) next.threeWheelerSlots = next.threeWheelerSlots || 'Three-wheeler slots is required';
+    }
+
+    if (code === 'VALIDATION_ERROR' && Array.isArray(details)) {
+      for (const d of details) {
+        const p = String(d?.path || '').toLowerCase();
+        if (p.includes('name')) next.name = next.name || (d.message || message);
+        if (p.includes('address')) next.address = next.address || (d.message || message);
+        if (p.includes('location.latitude') || p.includes('latitude')) next.latitude = next.latitude || (d.message || message);
+        if (p.includes('location.longitude') || p.includes('longitude')) next.longitude = next.longitude || (d.message || message);
+        if (p.includes('photo')) next.photo = next.photo || (d.message || message);
+        if (p.includes('totalslots') || p.includes('slotamount') || p.includes('slots')) next.slotAmount = next.slotAmount || (d.message || message);
+      }
+    }
+
+    if (Object.keys(next).length > 0) {
+      setParkingAreaFormErrors((prev) => ({ ...prev, ...next }));
+    }
+  };
+
   const createUserAndVehicle = async (e) => {
     e.preventDefault();
-    if (!newUser.email || !newVehicle.plate) return;
+
+    // Client-side validation
+    const errors = {};
+    const name = String(newUser.name || '').trim();
+    const email = String(newUser.email || '').trim().toLowerCase();
+    const phone = String(newUser.phone || '').trim();
+    const plate = normalizePlate(newVehicle.plate);
+
+    if (!name) errors.name = 'Name is required';
+    if (!email) errors.email = 'Email is required';
+    else if (!isValidEmail(email)) errors.email = 'Enter a valid email address';
+    if (phone && !isValidPhone(phone)) errors.phone = 'Enter a valid phone number';
+
+    if (!plate) errors.plate = 'Plate number is required';
+    else if (!isValidPlate(plate)) errors.plate = 'Plate must be 4-15 chars (A-Z, 0-9, -)';
+
+    setAddFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix the highlighted fields');
+      return;
+    }
+
+    const userPayload = {
+      name,
+      email,
+      phone: phone ? normalizePhone(phone) : '',
+    };
+
+    const vehiclePayload = {
+      plate,
+      slotName: newVehicle.slotName || '',
+      userEmail: email,
+      userName: name,
+      userPhone: phone ? normalizePhone(phone) : '',
+      vehicleType: newVehicle.vehicleType,
+      parkingAreaId: selectedParkingArea || undefined,
+    };
 
     const promise = async () => {
       // create user
       const userRes = await fetch(`${API_URL}/users`, {
         method: "POST",
         headers: authHeader,
-        body: JSON.stringify(newUser),
+        body: JSON.stringify(userPayload),
       });
-      const userData = await userRes.json();
-      if (!userRes.ok)
-        throw new Error(userData.error || "Failed to create user");
+      const userData = await userRes.json().catch(() => ({}));
+      if (!userRes.ok) {
+        const apiErr = {
+          message: userData.error || userData.message || 'Failed to create user',
+          code: userData.code,
+          details: userData.details,
+        };
+        applyApiErrorToAddForm(apiErr);
+        throw new Error(apiErr.message);
+      }
 
       // Update users list with the returned user data
       if (userData.user) {
@@ -289,19 +463,26 @@ const AdminDashboardPage = () => {
           method: "POST",
           headers: authHeader,
           body: JSON.stringify({
-            plate: newVehicle.plate,
-            userEmail: newUser.email,
-            userName: newUser.name,
-            userPhone: newUser.phone,
+            plate,
+            userEmail: email,
+            userName: name,
+            userPhone: phone ? normalizePhone(phone) : '',
             vehicleType: newVehicle.vehicleType,
             parkingAreaId: selectedParkingArea,
             slotNumber: selectedSlotNumber,
             createdBy: user?.email || "admin",
           }),
         });
-        const slotData = await slotRes.json();
-        if (!slotRes.ok)
-          throw new Error(slotData.error || "Failed to create vehicle");
+        const slotData = await slotRes.json().catch(() => ({}));
+        if (!slotRes.ok) {
+          const apiErr = {
+            message: slotData.error || slotData.message || 'Failed to create vehicle',
+            code: slotData.code,
+            details: slotData.details,
+          };
+          applyApiErrorToAddForm(apiErr);
+          throw new Error(apiErr.message);
+        }
 
         const vehicleFromApi = slotData.vehicle;
         const normalizedVehicle = vehicleFromApi
@@ -330,24 +511,24 @@ const AdminDashboardPage = () => {
         const vehicleRes = await fetch(`${API_URL}/vehicles`, {
           method: "POST",
           headers: authHeader,
-          body: JSON.stringify({
-            plate: newVehicle.plate,
-            slotName: newVehicle.slotName || "",
-            userEmail: newUser.email,
-            userName: newUser.name,
-            userPhone: newUser.phone,
-            vehicleType: newVehicle.vehicleType,
-            parkingAreaId: selectedParkingArea || undefined,
-          }),
+          body: JSON.stringify(vehiclePayload),
         });
-        const vehicleData = await vehicleRes.json();
-        if (!vehicleRes.ok)
-          throw new Error(vehicleData.error || "Failed to create vehicle");
+        const vehicleData = await vehicleRes.json().catch(() => ({}));
+        if (!vehicleRes.ok) {
+          const apiErr = {
+            message: vehicleData.error || vehicleData.message || 'Failed to create vehicle',
+            code: vehicleData.code,
+            details: vehicleData.details,
+          };
+          applyApiErrorToAddForm(apiErr);
+          throw new Error(apiErr.message);
+        }
         setVehicles((prev) => [vehicleData.vehicle, ...prev]);
       }
 
       setNewUser({ name: "", email: "", phone: "" });
       setNewVehicle({ plate: "", slotName: "", vehicleType: "Car" });
+      setAddFormErrors({});
       setSelectedParkingArea("");
       setSelectedSlotNumber(null);
       setAvailableSlots([]);
@@ -456,7 +637,7 @@ const AdminDashboardPage = () => {
     });
   };
 
-  {/*const updateSlot = async (s, next) => {
+  /* const updateSlot = async (s, next) => {
     try {
       const res = await fetch(`${API_URL}/slots/${s._id}`, {
         method: "PUT",
@@ -496,48 +677,95 @@ const AdminDashboardPage = () => {
       error: (err) => err.message || "An error occurred.",
     });
   };
-*/}
+*/
 
   const resetParkingAreaForm = () =>
-    setNewParkingArea({
-      name: "",
-      address: "",
-      latitude: "",
-      longitude: "",
-      slotAmount: "",
-      carSlots: "",
-      bikeSlots: "",
-      vanSlots: "",
-      threeWheelerSlots: "",
-      photo: "",
-    });
+    {
+      setNewParkingArea({
+        name: "",
+        address: "",
+        latitude: "",
+        longitude: "",
+        slotAmount: "",
+        carSlots: "",
+        bikeSlots: "",
+        vanSlots: "",
+        threeWheelerSlots: "",
+        photo: "",
+      });
+      setParkingAreaFormErrors({});
+    };
 
   const createParkingArea = async (e) => {
     e.preventDefault();
-    const { name, address, latitude, longitude, slotAmount, photo, carSlots, bikeSlots, vanSlots, threeWheelerSlots } =
-      newParkingArea;
+    const { name, address, latitude, longitude, slotAmount, photo, carSlots, bikeSlots, vanSlots, threeWheelerSlots } = newParkingArea;
 
-    if (!name.trim() || !address.trim() || !latitude || !longitude) {
-      toast.error("Please fill in name, address, and coordinates");
-      return;
-    }
+    const errors = {};
+    const trimmedName = String(name || '').trim();
+    const trimmedAddress = String(address || '').trim();
+    const trimmedPhoto = String(photo || '').trim();
 
+    // All fields are required
+    if (!trimmedName) errors.name = 'Area name is required';
+    if (!trimmedAddress) errors.address = 'Address is required';
+
+    // Latitude validation - required
     const parsedLat = Number(latitude);
-    const parsedLng = Number(longitude);
-    const parsedSlots = Number(slotAmount);
+    if (latitude === '' || latitude === null || latitude === undefined) errors.latitude = 'Latitude is required';
+    else if (!Number.isFinite(parsedLat)) errors.latitude = 'Latitude must be a valid number';
+    else if (parsedLat < -90 || parsedLat > 90) errors.latitude = 'Latitude must be between -90 and 90';
 
-    if (!Number.isFinite(parsedLat) || !Number.isFinite(parsedLng)) {
-      toast.error("Latitude and longitude must be valid numbers");
-      return;
+    // Longitude validation - required
+    const parsedLng = Number(longitude);
+    if (longitude === '' || longitude === null || longitude === undefined) errors.longitude = 'Longitude is required';
+    else if (!Number.isFinite(parsedLng)) errors.longitude = 'Longitude must be a valid number';
+    else if (parsedLng < -180 || parsedLng > 180) errors.longitude = 'Longitude must be between -180 and 180';
+
+    // Photo URL - required
+    if (!trimmedPhoto) {
+      errors.photo = 'Photo URL is required';
+    } else if (!isValidHttpUrl(trimmedPhoto)) {
+      errors.photo = 'Photo must be a valid http/https URL';
     }
 
-    const parsedCar = Number(carSlots || 0);
-    const parsedBike = Number(bikeSlots || 0);
-    const parsedVan = Number(vanSlots || 0);
-    const parsedThree = Number(threeWheelerSlots || 0);
+    // Slot counts - all required and must be >= 0
+    const validateSlotCount = (value, field, label) => {
+      if (value === '' || value === null || value === undefined) {
+        errors[field] = `${label} is required`;
+        return 0;
+      }
+      const n = Number(value);
+      if (!Number.isFinite(n)) errors[field] = `${label} must be a number`;
+      else if (!Number.isInteger(n)) errors[field] = `${label} must be a whole number`;
+      else if (n < 0) errors[field] = `${label} must be 0 or greater`;
+      return n;
+    };
+
+    const parsedCar = validateSlotCount(carSlots, 'carSlots', 'Car slots');
+    const parsedBike = validateSlotCount(bikeSlots, 'bikeSlots', 'Bike slots');
+    const parsedVan = validateSlotCount(vanSlots, 'vanSlots', 'Van slots');
+    const parsedThree = validateSlotCount(threeWheelerSlots, 'threeWheelerSlots', 'Three-wheeler slots');
+
+    // Total slots - calculated from sum OR manual entry required
     const sumTyped = parsedCar + parsedBike + parsedVan + parsedThree;
-    if (!(Number.isFinite(parsedSlots) && parsedSlots > 0) && sumTyped <= 0) {
-      toast.error("Provide total slots or per-type counts > 0");
+    const parsedSlots = Number(slotAmount === '' ? 0 : slotAmount);
+
+    // If sum of typed slots is 0, require slotAmount to be filled
+    if (sumTyped <= 0) {
+      if (slotAmount === '' || slotAmount === null || slotAmount === undefined) {
+        errors.slotAmount = 'Total slots is required (or fill slot counts above)';
+      } else if (!Number.isFinite(parsedSlots)) {
+        errors.slotAmount = 'Total slots must be a number';
+      } else if (!Number.isInteger(parsedSlots)) {
+        errors.slotAmount = 'Total slots must be a whole number';
+      } else if (parsedSlots <= 0) {
+        errors.slotAmount = 'Total slots must be greater than 0';
+      }
+    }
+
+    setParkingAreaFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix the highlighted fields');
       return;
     }
 
@@ -546,14 +774,14 @@ const AdminDashboardPage = () => {
         method: "POST",
         headers: authHeader,
         body: JSON.stringify({
-          name: name.trim(),
-          address: address.trim(),
+          name: trimmedName,
+          address: trimmedAddress,
           slotAmount: sumTyped > 0 ? sumTyped : parsedSlots,
           carSlots: parsedCar,
           bikeSlots: parsedBike,
           vanSlots: parsedVan,
           threeWheelerSlots: parsedThree,
-          photo: photo?.trim() || undefined,
+          photo: trimmedPhoto || undefined,
           location: {
             latitude: parsedLat,
             longitude: parsedLng,
@@ -561,8 +789,13 @@ const AdminDashboardPage = () => {
         }),
       });
 
+      if (!res.ok) {
+        const apiErr = await readApiError(res);
+        applyApiErrorToParkingAreaForm(apiErr);
+        throw new Error(apiErr.message || 'Failed to create area');
+      }
+
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to create area");
 
       setParkingAreas((prev) => [data.parkingArea, ...prev]);
       resetParkingAreaForm();
@@ -639,21 +872,34 @@ const AdminDashboardPage = () => {
       description: "",
     });
     setEditingCharge(null);
+    setChargeFormErrors({});
   };
 
   // Parking Charges Management Functions
   const createOrUpdateParkingCharge = async (e) => {
     e.preventDefault();
-    if (!newCharge.vehicleType || !newCharge.amount) {
-      toast.error("Please fill in all required fields");
+    
+    // Validate all fields
+    const errors = {};
+    if (!newCharge.vehicleType) errors.vehicleType = 'Vehicle type is required';
+    
+    const trimmedAmount = String(newCharge.amount || '').trim();
+    if (!trimmedAmount) errors.amount = 'Amount is required';
+    else {
+      const parsedAmount = Number(trimmedAmount);
+      if (!Number.isFinite(parsedAmount)) errors.amount = 'Amount must be a valid number';
+      else if (parsedAmount <= 0) errors.amount = 'Amount must be greater than 0';
+    }
+    
+    if (!newCharge.duration) errors.duration = 'Duration is required';
+    
+    setChargeFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error("Please fix the highlighted fields");
       return;
     }
 
     const parsedAmount = Number(newCharge.amount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      toast.error("Amount must be a positive number");
-      return;
-    }
 
     const promise = async () => {
       const url = editingCharge
@@ -889,27 +1135,49 @@ const AdminDashboardPage = () => {
                     placeholder="Name"
                     value={newUser.name}
                     onChange={(e) =>
-                      setNewUser((u) => ({ ...u, name: e.target.value }))
+                      (setNewUser((u) => ({ ...u, name: e.target.value })),
+                      setAddFormErrors((prev) => ({ ...prev, name: undefined })))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                    required
+                    className={`w-full rounded-md focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 ${
+                      addFormErrors.name ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {addFormErrors.name && (
+                    <p className="text-sm text-red-600 dark:text-red-300">{addFormErrors.name}</p>
+                  )}
                   <input
                     placeholder="Email"
+                    type="email"
                     required
                     value={newUser.email}
                     onChange={(e) =>
-                      setNewUser((u) => ({ ...u, email: e.target.value }))
+                      (setNewUser((u) => ({ ...u, email: e.target.value })),
+                      setAddFormErrors((prev) => ({ ...prev, email: undefined })))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                    className={`w-full rounded-md focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 ${
+                      addFormErrors.email ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {addFormErrors.email && (
+                    <p className="text-sm text-red-600 dark:text-red-300">{addFormErrors.email}</p>
+                  )}
                   <input
                     placeholder="Phone"
+                    type="tel"
+                    inputMode="tel"
                     value={newUser.phone}
                     onChange={(e) =>
-                      setNewUser((u) => ({ ...u, phone: e.target.value }))
+                      (setNewUser((u) => ({ ...u, phone: e.target.value })),
+                      setAddFormErrors((prev) => ({ ...prev, phone: undefined })))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                    className={`w-full rounded-md focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 ${
+                      addFormErrors.phone ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {addFormErrors.phone && (
+                    <p className="text-sm text-red-600 dark:text-red-300">{addFormErrors.phone}</p>
+                  )}
                 </div>
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium">Vehicle Details</h3>
@@ -918,18 +1186,25 @@ const AdminDashboardPage = () => {
                     required
                     value={newVehicle.plate}
                     onChange={(e) =>
-                      setNewVehicle((v) => ({ ...v, plate: e.target.value }))
+                      (setNewVehicle((v) => ({ ...v, plate: e.target.value })),
+                      setAddFormErrors((prev) => ({ ...prev, plate: undefined })))
                     }
-                    className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
+                    className={`w-full rounded-md focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100 ${
+                      addFormErrors.plate ? 'border-red-400 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'
+                    }`}
                   />
+                  {addFormErrors.plate && (
+                    <p className="text-sm text-red-600 dark:text-red-300">{addFormErrors.plate}</p>
+                  )}
 
                   <select
                     value={newVehicle.vehicleType}
                     onChange={(e) =>
-                      setNewVehicle((v) => ({
+                      (setNewVehicle((v) => ({
                         ...v,
                         vehicleType: e.target.value,
-                      }))
+                      })),
+                      setAddFormErrors((prev) => ({ ...prev, vehicleType: undefined })))
                     }
                     className="w-full rounded-md border-gray-300 focus:border-primary focus:ring-primary dark:bg-slate-900 dark:border-slate-700 dark:text-slate-100"
                   >
@@ -939,6 +1214,9 @@ const AdminDashboardPage = () => {
                       </option>
                     ))}
                   </select>
+                  {addFormErrors.vehicleType && (
+                    <p className="text-sm text-red-600 dark:text-red-300">{addFormErrors.vehicleType}</p>
+                  )}
                   <select
                     value={selectedParkingArea}
                     onChange={(e) => {
@@ -1355,16 +1633,26 @@ const AdminDashboardPage = () => {
                     </label>
                     <input
                       value={newParkingArea.name}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setNewParkingArea((prev) => ({
                           ...prev,
                           name: e.target.value,
-                        }))
-                      }
+                        }));
+                        setParkingAreaFormErrors((prev) => ({ ...prev, name: undefined }));
+                      }}
                       required
                       placeholder="e.g., Basement Block A"
-                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                        parkingAreaFormErrors.name
+                          ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                          : 'border-gray-300'
+                      }`}
                     />
+                    {parkingAreaFormErrors.name && (
+                      <p className="text-sm text-red-600 dark:text-red-300">
+                        {parkingAreaFormErrors.name}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
@@ -1372,17 +1660,27 @@ const AdminDashboardPage = () => {
                     </label>
                     <textarea
                       value={newParkingArea.address}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setNewParkingArea((prev) => ({
                           ...prev,
                           address: e.target.value,
-                        }))
-                      }
+                        }));
+                        setParkingAreaFormErrors((prev) => ({ ...prev, address: undefined }));
+                      }}
                       required
                       rows={3}
                       placeholder="Full address or quick directions"
-                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                        parkingAreaFormErrors.address
+                          ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                          : 'border-gray-300'
+                      }`}
                     />
+                    {parkingAreaFormErrors.address && (
+                      <p className="text-sm text-red-600 dark:text-red-300">
+                        {parkingAreaFormErrors.address}
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
@@ -1393,16 +1691,26 @@ const AdminDashboardPage = () => {
                         type="number"
                         step="any"
                         value={newParkingArea.latitude}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewParkingArea((prev) => ({
                             ...prev,
                             latitude: e.target.value,
-                          }))
-                        }
+                          }));
+                          setParkingAreaFormErrors((prev) => ({ ...prev, latitude: undefined }));
+                        }}
                         required
                         placeholder="12.9716"
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                          parkingAreaFormErrors.latitude
+                            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300'
+                        }`}
                       />
+                      {parkingAreaFormErrors.latitude && (
+                        <p className="text-sm text-red-600 dark:text-red-300">
+                          {parkingAreaFormErrors.latitude}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
@@ -1412,16 +1720,26 @@ const AdminDashboardPage = () => {
                         type="number"
                         step="any"
                         value={newParkingArea.longitude}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewParkingArea((prev) => ({
                             ...prev,
                             longitude: e.target.value,
-                          }))
-                        }
+                          }));
+                          setParkingAreaFormErrors((prev) => ({ ...prev, longitude: undefined }));
+                        }}
                         required
                         placeholder="77.5946"
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                          parkingAreaFormErrors.longitude
+                            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300'
+                        }`}
                       />
+                      {parkingAreaFormErrors.longitude && (
+                        <p className="text-sm text-red-600 dark:text-red-300">
+                          {parkingAreaFormErrors.longitude}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -1430,15 +1748,25 @@ const AdminDashboardPage = () => {
                     </label>
                     <input
                       value={newParkingArea.photo}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setNewParkingArea((prev) => ({
                           ...prev,
                           photo: e.target.value,
-                        }))
-                      }
+                        }));
+                        setParkingAreaFormErrors((prev) => ({ ...prev, photo: undefined }));
+                      }}
                       placeholder="https://example.com/photo.jpg"
-                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                        parkingAreaFormErrors.photo
+                          ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                          : 'border-gray-300'
+                      }`}
                     />
+                    {parkingAreaFormErrors.photo && (
+                      <p className="text-sm text-red-600 dark:text-red-300">
+                        {parkingAreaFormErrors.photo}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="space-y-4">
@@ -1450,15 +1778,26 @@ const AdminDashboardPage = () => {
                       <input
                         type="number"
                         min="0"
+                        step="1"
                         value={newParkingArea.carSlots}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewParkingArea((prev) => ({
                             ...prev,
                             carSlots: e.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                          }));
+                          setParkingAreaFormErrors((prev) => ({ ...prev, carSlots: undefined }));
+                        }}
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                          parkingAreaFormErrors.carSlots
+                            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300'
+                        }`}
                       />
+                      {parkingAreaFormErrors.carSlots && (
+                        <p className="text-sm text-red-600 dark:text-red-300">
+                          {parkingAreaFormErrors.carSlots}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
@@ -1467,15 +1806,26 @@ const AdminDashboardPage = () => {
                       <input
                         type="number"
                         min="0"
+                        step="1"
                         value={newParkingArea.bikeSlots}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewParkingArea((prev) => ({
                             ...prev,
                             bikeSlots: e.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                          }));
+                          setParkingAreaFormErrors((prev) => ({ ...prev, bikeSlots: undefined }));
+                        }}
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                          parkingAreaFormErrors.bikeSlots
+                            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300'
+                        }`}
                       />
+                      {parkingAreaFormErrors.bikeSlots && (
+                        <p className="text-sm text-red-600 dark:text-red-300">
+                          {parkingAreaFormErrors.bikeSlots}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
@@ -1484,15 +1834,26 @@ const AdminDashboardPage = () => {
                       <input
                         type="number"
                         min="0"
+                        step="1"
                         value={newParkingArea.vanSlots}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewParkingArea((prev) => ({
                             ...prev,
                             vanSlots: e.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                          }));
+                          setParkingAreaFormErrors((prev) => ({ ...prev, vanSlots: undefined }));
+                        }}
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                          parkingAreaFormErrors.vanSlots
+                            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300'
+                        }`}
                       />
+                      {parkingAreaFormErrors.vanSlots && (
+                        <p className="text-sm text-red-600 dark:text-red-300">
+                          {parkingAreaFormErrors.vanSlots}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
@@ -1501,15 +1862,26 @@ const AdminDashboardPage = () => {
                       <input
                         type="number"
                         min="0"
+                        step="1"
                         value={newParkingArea.threeWheelerSlots}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewParkingArea((prev) => ({
                             ...prev,
                             threeWheelerSlots: e.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                          }));
+                          setParkingAreaFormErrors((prev) => ({ ...prev, threeWheelerSlots: undefined }));
+                        }}
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                          parkingAreaFormErrors.threeWheelerSlots
+                            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300'
+                        }`}
                       />
+                      {parkingAreaFormErrors.threeWheelerSlots && (
+                        <p className="text-sm text-red-600 dark:text-red-300">
+                          {parkingAreaFormErrors.threeWheelerSlots}
+                        </p>
+                      )}
                     </div>
                     <div className="sm:col-span-2">
                       <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
@@ -1518,15 +1890,26 @@ const AdminDashboardPage = () => {
                       <input
                         type="number"
                         min="1"
+                        step="1"
                         value={newParkingArea.slotAmount}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewParkingArea((prev) => ({
                             ...prev,
                             slotAmount: e.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                          }));
+                          setParkingAreaFormErrors((prev) => ({ ...prev, slotAmount: undefined }));
+                        }}
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 ${
+                          parkingAreaFormErrors.slotAmount
+                            ? 'border-red-400 focus:border-red-500 focus:ring-red-500'
+                            : 'border-gray-300'
+                        }`}
                       />
+                      {parkingAreaFormErrors.slotAmount && (
+                        <p className="text-sm text-red-600 dark:text-red-300">
+                          {parkingAreaFormErrors.slotAmount}
+                        </p>
+                      )}
                       <div className="text-xs text-gray-500 mt-1 dark:text-slate-400">
                         Current sum: {Number(newParkingArea.carSlots||0) + Number(newParkingArea.bikeSlots||0) + Number(newParkingArea.vanSlots||0) + Number(newParkingArea.threeWheelerSlots||0)}
                       </div>
@@ -1543,13 +1926,14 @@ const AdminDashboardPage = () => {
                         ? Number(newParkingArea.longitude)
                         : undefined
                     }
-                    onLocationChange={(lat, lng) =>
+                    onLocationChange={(lat, lng) => {
                       setNewParkingArea((prev) => ({
                         ...prev,
                         latitude: lat,
                         longitude: lng,
-                      }))
-                    }
+                      }));
+                      setParkingAreaFormErrors((prev) => ({ ...prev, latitude: undefined, longitude: undefined }));
+                    }}
                   />
                   <div className="flex items-center gap-3">
                     <button
@@ -1686,14 +2070,19 @@ const AdminDashboardPage = () => {
                     </label>
                     <select
                       value={newCharge.vehicleType}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setNewCharge((prev) => ({
                           ...prev,
                           vehicleType: e.target.value,
-                        }))
-                      }
+                        }));
+                        setChargeFormErrors((prev) => ({ ...prev, vehicleType: "" }));
+                      }}
                       required
-                      className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                      className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:ring-primary dark:bg-slate-900 dark:text-slate-100 ${
+                        chargeFormErrors.vehicleType
+                          ? "border-red-500 focus:border-red-500 dark:border-red-500"
+                          : "border-gray-300 focus:border-primary dark:border-slate-700"
+                      }`}
                     >
                       {vehicleTypes.map((type) => (
                         <option key={type} value={type}>
@@ -1701,6 +2090,9 @@ const AdminDashboardPage = () => {
                         </option>
                       ))}
                     </select>
+                    {chargeFormErrors.vehicleType && (
+                      <p className="mt-1 text-sm text-red-600">{chargeFormErrors.vehicleType}</p>
+                    )}
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
@@ -1711,15 +2103,23 @@ const AdminDashboardPage = () => {
                         type="number"
                         min="1"
                         value={newCharge.amount}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewCharge((prev) => ({
                             ...prev,
                             amount: e.target.value,
-                          }))
-                        }
+                          }));
+                          setChargeFormErrors((prev) => ({ ...prev, amount: "" }));
+                        }}
                         required
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:ring-primary dark:bg-slate-900 dark:text-slate-100 ${
+                          chargeFormErrors.amount
+                            ? "border-red-500 focus:border-red-500 dark:border-red-500"
+                            : "border-gray-300 focus:border-primary dark:border-slate-700"
+                        }`}
                       />
+                      {chargeFormErrors.amount && (
+                        <p className="mt-1 text-sm text-red-600">{chargeFormErrors.amount}</p>
+                      )}
                     </div>
                     <div>
                       <label className="text-sm font-medium text-gray-700 dark:text-slate-200">
@@ -1727,13 +2127,18 @@ const AdminDashboardPage = () => {
                       </label>
                       <select
                         value={newCharge.duration}
-                        onChange={(e) =>
+                        onChange={(e) => {
                           setNewCharge((prev) => ({
                             ...prev,
                             duration: e.target.value,
-                          }))
-                        }
-                        className="mt-1 w-full rounded-lg border border-gray-300 bg-white text-gray-900 focus:border-primary focus:ring-primary dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                          }));
+                          setChargeFormErrors((prev) => ({ ...prev, duration: "" }));
+                        }}
+                        className={`mt-1 w-full rounded-lg border bg-white text-gray-900 focus:ring-primary dark:bg-slate-900 dark:text-slate-100 ${
+                          chargeFormErrors.duration
+                            ? "border-red-500 focus:border-red-500 dark:border-red-500"
+                            : "border-gray-300 focus:border-primary dark:border-slate-700"
+                        }`}
                       >
                         <option value="per hour">Per hour</option>
                         <option value="per day">Per day</option>

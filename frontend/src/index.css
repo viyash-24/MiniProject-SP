@@ -1,98 +1,119 @@
+/* Import Tailwind's base styles (resets), components, and utility classes */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Define custom CSS variables for theming */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
+    /* Light mode color variables */
 
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    --background: 0 0% 100%; /* Main page background (white) */
+    --foreground: 240 10% 3.9%; /* Default text color */
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
+    --card: 0 0% 100%; /* Card background color */
+    --card-foreground: 240 10% 3.9%; /* Card text color */
 
-    --primary: 256 100% 55%; /* Vibrant Violet */
-    --primary-foreground: 0 0% 98%;
+    --popover: 0 0% 100%; /* Popover background */
+    --popover-foreground: 240 10% 3.9%; /* Popover text color */
 
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
+    --primary: 256 100% 55%; /* Primary brand color (Vibrant Violet) */
+    --primary-foreground: 0 0% 98%; /* Text color on primary background */
 
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --secondary: 240 4.8% 95.9%; /* Secondary background color */
+    --secondary-foreground: 240 5.9% 10%; /* Secondary text color */
 
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%; /* Muted (soft gray) background */
+    --muted-foreground: 240 3.8% 46.1%; /* Muted text color */
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --accent: 240 4.8% 95.9%; /* Accent background */
+    --accent-foreground: 240 5.9% 10%; /* Accent text color */
 
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 256 100% 55%;
+    --destructive: 0 84.2% 60.2%; /* Error/Danger color */
+    --destructive-foreground: 0 0% 98%; /* Text on error background */
 
-    --radius: 0.75rem;
+    --border: 240 5.9% 90%; /* Default border color */
+    --input: 240 5.9% 90%; /* Input field border/background */
+    --ring: 256 100% 55%; /* Focus ring color */
+
+    --radius: 0.75rem; /* Default border radius */
   }
 
+  /* Dark mode color variables (activated when .dark-mode class is applied) */
   .dark-mode {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
+    --background: 240 10% 3.9%; /* Dark background */
+    --foreground: 0 0% 98%; /* Light text */
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 240 10% 3.9%; /* Dark card background */
+    --card-foreground: 0 0% 98%; /* Card text */
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%; /* Dark popover background */
+    --popover-foreground: 0 0% 98%; /* Popover text */
 
-    --primary: 256 100% 65%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 256 100% 65%; /* Brighter violet for dark mode */
+    --primary-foreground: 0 0% 98%; /* Text on primary */
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%; /* Dark secondary background */
+    --secondary-foreground: 0 0% 98%; /* Secondary text */
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 240 3.7% 15.9%; /* Dark muted background */
+    --muted-foreground: 240 5% 64.9%; /* Muted text */
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 240 3.7% 15.9%; /* Dark accent background */
+    --accent-foreground: 0 0% 98%; /* Accent text */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%; /* Dark error color */
+    --destructive-foreground: 0 0% 98%; /* Text on error */
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 256 100% 65%;
+    --border: 240 3.7% 15.9%; /* Dark border color */
+    --input: 240 3.7% 15.9%; /* Dark input background */
+    --ring: 256 100% 65%; /* Dark mode focus ring */
   }
 }
 
+/* Apply global base styles */
 @layer base {
   * {
-    @apply border-border;
+    @apply border-border; /* Apply default border color to all elements */
   }
+
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased; 
+    /* Apply background color, text color, and smooth font rendering */
+
     font-feature-settings: "rlig" 1, "calt" 1;
+    /* Enable advanced font features */
   }
 }
 
-/* Modern Scrollbar */
+/* Custom scrollbar styling */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 6px; /* Scrollbar width */
+  height: 6px; /* Scrollbar height */
 }
+
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  @apply bg-transparent; /* Transparent scrollbar track */
 }
+
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/20 rounded-full hover:bg-muted-foreground/40 transition-colors;
+  @apply bg-muted-foreground/20 rounded-full 
+         hover:bg-muted-foreground/40 
+         transition-colors;
+  /* Scrollbar thumb with hover effect */
 }
 
-/* Utilities */
+/* Glassmorphism panel effect */
 .glass-panel {
-  @apply bg-white/70 dark:bg-black/70 backdrop-blur-xl border border-white/20 dark:border-white/10 shadow-xl;
+  @apply bg-white/70 dark:bg-black/70 
+         backdrop-blur-xl 
+         border border-white/20 
+         dark:border-white/10 
+         shadow-xl;
+  /* Semi-transparent background with blur and soft border */
 }
 
+/* Utility class for balanced text wrapping */
 .text-balance {
-  text-wrap: balance;
+  text-wrap: balance; /* Improves text wrapping for better readability */
 }
