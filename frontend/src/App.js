@@ -37,7 +37,6 @@ const NavigationHandler = () => {
 
 function App() {
  
-  // Redirect to admin dashboard if user is admin
   const AdminRedirect = ({ children }) => {
     const { isAdmin } = useAuth();
     if (isAdmin) return <Navigate to="/admin" replace />;
