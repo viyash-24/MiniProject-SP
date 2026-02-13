@@ -16,20 +16,51 @@ const RegisterPage = () => {
     password: ''
   });
 
-  // Error state for displaying registration errors
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const onChange = (e) =>
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+  const isValidPhone = (phone) => {
+    const digits = String(phone || '').replace(/\D/g, '');
+    return digits.length >= 7 && digits.length <= 15;
+  };
+
+  const onChange = (e) => {
     setForm({ ...form, [e.target.id]: e.target.value });
+    setFieldErrors((prev) => ({ ...prev, [e.target.id]: undefined }));
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    // Validate all fields
+    const errors = {};
+    const trimmedName = String(form.name || '').trim();
+    const trimmedEmail = String(form.email || '').trim();
+    const trimmedPhone = String(form.phone || '').trim();
+    const trimmedPassword = String(form.password || '');
+    
+    if (!trimmedName) errors.name = 'Full name is required';
+    else if (trimmedName.length < 2) errors.name = 'Name must be at least 2 characters';
+    
+    if (!trimmedEmail) errors.email = 'Email is required';
+    else if (!isValidEmail(trimmedEmail)) errors.email = 'Please enter a valid email address';
+    
+    if (!trimmedPhone) errors.phone = 'Phone number is required';
+    else if (!isValidPhone(trimmedPhone)) errors.phone = 'Please enter a valid phone number (7-15 digits)';
+    
+    if (!trimmedPassword) errors.password = 'Password is required';
+    else if (trimmedPassword.length < 6) errors.password = 'Password must be at least 6 characters';
+    
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    
     setLoading(true);
     try {
-      await registerWithEmail(form.name, form.email, form.password, form.phone);
+      await registerWithEmail(trimmedName, trimmedEmail, trimmedPassword, trimmedPhone);
       navigate('/');
     } catch (err) {
       setError(err?.message || 'Failed to create account');
@@ -104,11 +135,15 @@ const RegisterPage = () => {
                     type="text"
                     value={form.name}
                     onChange={onChange}
-                    required
-                    className="block w-full pl-10 pr-3 py-2.5 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all"
+                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all ${
+                      fieldErrors.name ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-input'
+                    }`}
                     placeholder="John Doe"
                   />
                 </div>
+                {fieldErrors.name && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
+                )}
               </div>
 
               <div>
@@ -122,11 +157,15 @@ const RegisterPage = () => {
                     type="email"
                     value={form.email}
                     onChange={onChange}
-                    required
-                    className="block w-full pl-10 pr-3 py-2.5 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all"
+                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all ${
+                      fieldErrors.email ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-input'
+                    }`}
                     placeholder="you@example.com"
                   />
                 </div>
+                {fieldErrors.email && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div>
@@ -140,11 +179,15 @@ const RegisterPage = () => {
                     type="tel"
                     value={form.phone}
                     onChange={onChange}
-                    required
-                    className="block w-full pl-10 pr-3 py-2.5 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all"
+                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all ${
+                      fieldErrors.phone ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-input'
+                    }`}
                     placeholder="+1 (555) 000-0000"
                   />
                 </div>
+                {fieldErrors.phone && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.phone}</p>
+                )}
               </div>
 
               <div>
@@ -158,8 +201,9 @@ const RegisterPage = () => {
                     type={showPassword ? "text" : "password"}
                     value={form.password}
                     onChange={onChange}
-                    required
-                    className="block w-full pl-10 pr-10 py-2.5 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all"
+                    className={`block w-full pl-10 pr-10 py-2.5 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all ${
+                      fieldErrors.password ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-input'
+                    }`}
                     placeholder="••••••••"
                   />
                   <button
@@ -170,6 +214,9 @@ const RegisterPage = () => {
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                {fieldErrors.password && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+                )}
               </div>
 
               <Button
