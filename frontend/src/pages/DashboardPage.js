@@ -19,7 +19,6 @@ function DashboardPage() {
   const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
   const BASE_URL = API_URL.replace('/api', '');
 
-  // Fetch parking areas from the API
   const fetchParkingAreas = useCallback(async () => {
     try {
       setLoading(true);

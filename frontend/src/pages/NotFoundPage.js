@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { AlertCircle, Home } from 'lucide-react';
 import { Button } from '../components/ui/button';
 
-// NotFoundPage component to display a 404 error message
 const NotFoundPage = () => {
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4 bg-background">

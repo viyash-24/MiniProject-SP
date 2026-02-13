@@ -1,71 +1,84 @@
-import { Eye, EyeOff, Mail, Lock, ArrowRight } from "lucide-react";
-import React, { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { motion } from "framer-motion";
-import { Button } from "../components/ui/button";
+import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { motion } from 'framer-motion';
+import { Button } from '../components/ui/button';
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { loginWithGoogle, loginWithEmailPassword } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const from = location.state?.from?.pathname || "/dashboard";
+  const from = location.state?.from?.pathname || '/dashboard';
+
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError('');
+    
+    // Validate all fields
+    const errors = {};
+    const trimmedEmail = String(email || '').trim();
+    const trimmedPassword = String(password || '');
+    
+    if (!trimmedEmail) errors.email = 'Email is required';
+    else if (!isValidEmail(trimmedEmail)) errors.email = 'Please enter a valid email address';
+    
+    if (!trimmedPassword) errors.password = 'Password is required';
+    else if (trimmedPassword.length < 6) errors.password = 'Password must be at least 6 characters';
+    
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    
     setLoading(true);
     try {
-      await loginWithEmailPassword(email, password);
-      const isHardcodedAdmin =
-        email.toLowerCase().trim() === "admin@gmail.com" &&
-        password === "admin";
-      navigate(isHardcodedAdmin ? "/admin" : from, { replace: true });
+      await loginWithEmailPassword(trimmedEmail, trimmedPassword);
+      const isHardcodedAdmin = trimmedEmail.toLowerCase() === 'admin@gmail.com' && trimmedPassword === 'admin';
+      navigate(isHardcodedAdmin ? '/admin' : from, { replace: true });
     } catch (err) {
-      const msg = err?.message || "Failed to sign in";
+      const msg = err?.message || 'Failed to sign in';
       setError(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle Google sign-in
   const onGoogle = async () => {
     try {
       await loginWithGoogle();
       navigate(from, { replace: true });
     } catch (err) {
-      setError(err.message || "Failed to sign in with Google");
+      setError(err.message || 'Failed to sign in with Google');
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-12 sm:px-6 lg:px-8">
-      <motion.div
+      <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md space-y-8 bg-card p-8 rounded-2xl shadow-lg border border-border"
       >
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
-            Welcome back
-          </h2>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground">Welcome back</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             Enter your credentials to access your account
           </p>
         </div>
 
         {error && (
-          <motion.div
+          <motion.div 
             initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
+            animate={{ opacity: 1, height: 'auto' }}
             className="p-3 rounded-lg bg-destructive/10 text-destructive text-sm font-medium"
           >
             {error}
@@ -77,11 +90,7 @@ const LoginPage = () => {
             onClick={onGoogle}
             className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-input rounded-lg bg-background hover:bg-accent hover:text-accent-foreground transition-colors font-medium text-sm"
           >
-            <img
-              src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-              alt="Google"
-              className="h-5 w-5"
-            />
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="h-5 w-5" />
             Continue with Google
           </button>
 
@@ -90,19 +99,14 @@ const LoginPage = () => {
               <span className="w-full border-t border-border" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                Or continue with email
-              </span>
+              <span className="bg-card px-2 text-muted-foreground">Or continue with email</span>
             </div>
           </div>
 
           <form className="space-y-6" onSubmit={onSubmit}>
             <div className="space-y-4">
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-foreground mb-1"
-                >
+                <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
                   Email address
                 </label>
                 <div className="relative">
@@ -114,20 +118,24 @@ const LoginPage = () => {
                     name="email"
                     type="email"
                     autoComplete="email"
-                    required
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2.5 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all"
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                    }}
+                    className={`block w-full pl-10 pr-3 py-2.5 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all ${
+                      fieldErrors.email ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-input'
+                    }`}
                     placeholder="you@example.com"
                   />
                 </div>
+                {fieldErrors.email && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-foreground mb-1"
-                >
+                <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
                   Password
                 </label>
                 <div className="relative">
@@ -139,10 +147,14 @@ const LoginPage = () => {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    required
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-2.5 border border-input rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all"
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, password: undefined }));
+                    }}
+                    className={`block w-full pl-10 pr-10 py-2.5 border rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary focus:border-primary sm:text-sm transition-all ${
+                      fieldErrors.password ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-input'
+                    }`}
                     placeholder="••••••••"
                   />
                   <button
@@ -150,13 +162,12 @@ const LoginPage = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-foreground hover:text-foreground"
                   >
-                    {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
-                    ) : (
-                      <Eye className="h-5 w-5" />
-                    )}
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                {fieldErrors.password && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+                )}
               </div>
             </div>
 
@@ -168,19 +179,13 @@ const LoginPage = () => {
                   type="checkbox"
                   className="h-4 w-4 rounded border-input text-primary focus:ring-primary bg-background"
                 />
-                <label
-                  htmlFor="remember-me"
-                  className="ml-2 block text-sm text-muted-foreground"
-                >
+                <label htmlFor="remember-me" className="ml-2 block text-sm text-muted-foreground">
                   Remember me
                 </label>
               </div>
 
               <div className="text-sm">
-                <a
-                  href="#"
-                  className="font-medium text-primary hover:text-primary/80"
-                >
+                <a href="#" className="font-medium text-primary hover:text-primary/80">
                   Forgot password?
                 </a>
               </div>
@@ -194,20 +199,15 @@ const LoginPage = () => {
               {loading ? (
                 <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
-                <>
-                  Sign in <ArrowRight className="ml-2 h-4 w-4" />
-                </>
+                <>Sign in <ArrowRight className="ml-2 h-4 w-4" /></>
               )}
             </Button>
           </form>
         </div>
 
         <p className="text-center text-sm text-muted-foreground">
-          Don't have an account?{" "}
-          <Link
-            to="/register"
-            className="font-medium text-primary hover:text-primary/80 transition-colors"
-          >
+          Don't have an account?{' '}
+          <Link to="/register" className="font-medium text-primary hover:text-primary/80 transition-colors">
             Sign up for free
           </Link>
         </p>
