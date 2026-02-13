@@ -1,7 +1,6 @@
 import React from 'react';
 import { useLoading } from '../context/LoadingContext';
 
-// Loading bar component that displays at the top of the page during loading states
 const LoadingBar = () => {
   const { loading } = useLoading();
   return (

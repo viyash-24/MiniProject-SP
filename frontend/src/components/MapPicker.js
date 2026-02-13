@@ -55,7 +55,7 @@ const MapPicker = ({ latitude, longitude, onLocationChange }) => {
           {showMap ? 'Hide Map' : 'Show Map'}
         </button>
       </div>
-
+// 
       {showMap && (
         <div className="border rounded-lg overflow-hidden">
           {mapUrl ? (
