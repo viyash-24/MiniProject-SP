@@ -1,100 +1,92 @@
-/* Import Tailwind base styles, component classes, and utility classes */
+/* Import Tailwind's base styles (resets), components, and utility classes */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ============================= */
-/* Custom Theme Variables */
-/* ============================= */
+/* Define custom CSS variables for theming */
 @layer base {
   :root {
-    /* Light Mode Color Variables */
+    /* Light mode color variables */
 
-    --background: 0 0% 100%; /* Page background color (white) */
-    --foreground: 240 10% 3.9%; /* Main text color */
+    --background: 0 0% 100%; /* Main page background (white) */
+    --foreground: 240 10% 3.9%; /* Default text color */
 
-    --card: 0 0% 100%; /* Card background */
+    --card: 0 0% 100%; /* Card background color */
     --card-foreground: 240 10% 3.9%; /* Card text color */
 
     --popover: 0 0% 100%; /* Popover background */
     --popover-foreground: 240 10% 3.9%; /* Popover text color */
 
-    --primary: 256 100% 55%; /* Main brand color (Vibrant Violet) */
+    --primary: 256 100% 55%; /* Primary brand color (Vibrant Violet) */
     --primary-foreground: 0 0% 98%; /* Text color on primary background */
 
-    --secondary: 240 4.8% 95.9%; /* Secondary background */
+    --secondary: 240 4.8% 95.9%; /* Secondary background color */
     --secondary-foreground: 240 5.9% 10%; /* Secondary text color */
 
-    --muted: 240 4.8% 95.9%; /* Muted background (light gray) */
-    --muted-foreground: 240 3.8% 46.1%; /* Muted text */
+    --muted: 240 4.8% 95.9%; /* Muted (soft gray) background */
+    --muted-foreground: 240 3.8% 46.1%; /* Muted text color */
 
     --accent: 240 4.8% 95.9%; /* Accent background */
-    --accent-foreground: 240 5.9% 10%; /* Accent text */
+    --accent-foreground: 240 5.9% 10%; /* Accent text color */
 
     --destructive: 0 84.2% 60.2%; /* Error/Danger color */
-    --destructive-foreground: 0 0% 98%; /* Text on danger color */
+    --destructive-foreground: 0 0% 98%; /* Text on error background */
 
-    --border: 240 5.9% 90%; /* Border color */
+    --border: 240 5.9% 90%; /* Default border color */
     --input: 240 5.9% 90%; /* Input field border/background */
     --ring: 256 100% 55%; /* Focus ring color */
 
     --radius: 0.75rem; /* Default border radius */
   }
 
-  /* ============================= */
-  /* Dark Mode Variables */
-  /* ============================= */
+  /* Dark mode color variables (activated when .dark-mode class is applied) */
   .dark-mode {
     --background: 240 10% 3.9%; /* Dark background */
     --foreground: 0 0% 98%; /* Light text */
 
-    --card: 240 10% 3.9%;
-    --card-foreground: 0 0% 98%;
+    --card: 240 10% 3.9%; /* Dark card background */
+    --card-foreground: 0 0% 98%; /* Card text */
 
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%; /* Dark popover background */
+    --popover-foreground: 0 0% 98%; /* Popover text */
 
-    --primary: 256 100% 65%; /* Slightly brighter violet for dark mode */
-    --primary-foreground: 0 0% 98%;
+    --primary: 256 100% 65%; /* Brighter violet for dark mode */
+    --primary-foreground: 0 0% 98%; /* Text on primary */
 
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%; /* Dark secondary background */
+    --secondary-foreground: 0 0% 98%; /* Secondary text */
 
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
+    --muted: 240 3.7% 15.9%; /* Dark muted background */
+    --muted-foreground: 240 5% 64.9%; /* Muted text */
 
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --accent: 240 3.7% 15.9%; /* Dark accent background */
+    --accent-foreground: 0 0% 98%; /* Accent text */
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%; /* Dark error color */
+    --destructive-foreground: 0 0% 98%; /* Text on error */
 
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 256 100% 65%;
+    --border: 240 3.7% 15.9%; /* Dark border color */
+    --input: 240 3.7% 15.9%; /* Dark input background */
+    --ring: 256 100% 65%; /* Dark mode focus ring */
   }
 }
 
-/* ============================= */
-/* Global Base Styles */
-/* ============================= */
+/* Apply global base styles */
 @layer base {
   * {
     @apply border-border; /* Apply default border color to all elements */
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased; 
     /* Apply background color, text color, and smooth font rendering */
 
     font-feature-settings: "rlig" 1, "calt" 1;
-    /* Enable advanced font rendering features */
+    /* Enable advanced font features */
   }
 }
 
-/* ============================= */
-/* Custom Scrollbar Styling */
-/* ============================= */
+/* Custom scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px; /* Scrollbar width */
   height: 6px; /* Scrollbar height */
@@ -108,26 +100,20 @@
   @apply bg-muted-foreground/20 rounded-full 
          hover:bg-muted-foreground/40 
          transition-colors;
-  /* Scrollbar handle with hover effect */
+  /* Scrollbar thumb with hover effect */
 }
 
-/* ============================= */
-/* Glass Effect Panel */
-/* ============================= */
+/* Glassmorphism panel effect */
 .glass-panel {
-  @apply bg-white/70 
-         dark:bg-black/70 
+  @apply bg-white/70 dark:bg-black/70 
          backdrop-blur-xl 
          border border-white/20 
          dark:border-white/10 
          shadow-xl;
-  /* Creates a glassmorphism effect with blur and transparency */
+  /* Semi-transparent background with blur and soft border */
 }
 
-/* ============================= */
-/* Text Balance Utility */
-/* ============================= */
+/* Utility class for balanced text wrapping */
 .text-balance {
-  text-wrap: balance;
-  /* Balances text wrapping for better readability */
+  text-wrap: balance; /* Improves text wrapping for better readability */
 }
