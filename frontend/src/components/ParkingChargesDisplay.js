@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Car, Bike, Bus, Truck } from 'lucide-react';
+import Tuk from '../assets/tuk.png'
+import Van from '../assets/van.png'
+import { Car, Bike } from 'lucide-react';
 
 const getVehicleIcon = (type = '') => {
   const key = type.toLowerCase();
+  if (key.includes('tuk') || key.includes('auto')) {return( <div className="h-5 w-5"><img src={Tuk} alt="Tuk Tuk" className="h-5 w-5" /></div>);}
   if (key.includes('car') || key.includes('suv')) return <Car className="h-5 w-5" />;
   if (key.includes('bike') || key.includes('scooter')) return <Bike className="h-5 w-5" />;
-  if (key.includes('bus') || key.includes('van')) return <Bus className="h-5 w-5" />;
-  return <Truck className="h-5 w-5" />;
+  if (key.includes('van')) {return( <div className="h-5 w-5"><img src={Van} alt="Van" className="h-5 w-5" /></div>);}  
+  return <Car className="h-5 w-5" />;
 };
 
 const ParkingChargesDisplay = ({ compact = false, showHeading = true }) => {
