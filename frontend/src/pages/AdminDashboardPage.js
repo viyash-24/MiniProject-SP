@@ -80,7 +80,7 @@ const AdminDashboardPage = () => {
     "Car",
     "Bike",
     "Van",
-    "Auto",
+    "Tuk",
     "SUV",
     "Scooter",
     "Other",
