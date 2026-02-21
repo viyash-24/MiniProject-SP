@@ -26,6 +26,20 @@ const ProfilePage = () => {
 
   const [loading, setLoading] = useState(false);
 
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  // Validation helpers
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidHttpUrl = (url) => {
+    if (!url || !url.trim()) return true; // Optional field
+    try {
+      const u = new URL(url);
+      return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+      return false;
+    }
+  };
+
 
 
 
@@ -40,6 +54,34 @@ const ProfilePage = () => {
 
     if (!auth.currentUser) return toast.error('No authenticated user');
 
+    // Validate all fields
+    const errors = {};
+    
+    if (!displayName.trim()) {
+      errors.displayName = 'Display name is required';
+    }
+    
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!isValidEmail(email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    if (photoUrl.trim() && !isValidHttpUrl(photoUrl)) {
+      errors.photoUrl = 'Please enter a valid URL (http:// or https://)';
+    }
+    
+    if (password && password.length < 6) {
+      errors.password = 'Password must be at least 6 characters';
+    }
+    
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      toast.error('Please fix the errors in the form');
+      return;
+    }
+
+    setFieldErrors({});
     setLoading(true);
 
     try {
@@ -175,9 +217,19 @@ const ProfilePage = () => {
 
             <input
               value={displayName}
-              onChange={e => setDisplayName(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:border-primary focus:ring-primary px-3 py-2"
+              onChange={e => {
+                setDisplayName(e.target.value);
+                setFieldErrors(prev => ({ ...prev, displayName: '' }));
+              }}
+              className={`mt-1 block w-full rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:ring-primary px-3 py-2 ${
+                fieldErrors.displayName
+                  ? 'border-red-500 focus:border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-slate-700 focus:border-primary'
+              }`}
             />
+            {fieldErrors.displayName && (
+              <p className="mt-1 text-sm text-red-600">{fieldErrors.displayName}</p>
+            )}
 
           </div>
 
@@ -196,9 +248,19 @@ const ProfilePage = () => {
 
             <input
               value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:border-primary focus:ring-primary px-3 py-2"
+              onChange={e => {
+                setEmail(e.target.value);
+                setFieldErrors(prev => ({ ...prev, email: '' }));
+              }}
+              className={`mt-1 block w-full rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:ring-primary px-3 py-2 ${
+                fieldErrors.email
+                  ? 'border-red-500 focus:border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-slate-700 focus:border-primary'
+              }`}
             />
+            {fieldErrors.email && (
+              <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+            )}
 
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
               Changing your email may require re-authentication for security.
@@ -221,9 +283,19 @@ const ProfilePage = () => {
 
             <input
               value={photoUrl}
-              onChange={e => setPhotoUrl(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:border-primary focus:ring-primary px-3 py-2"
+              onChange={e => {
+                setPhotoUrl(e.target.value);
+                setFieldErrors(prev => ({ ...prev, photoUrl: '' }));
+              }}
+              className={`mt-1 block w-full rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:ring-primary px-3 py-2 ${
+                fieldErrors.photoUrl
+                  ? 'border-red-500 focus:border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-slate-700 focus:border-primary'
+              }`}
             />
+            {fieldErrors.photoUrl && (
+              <p className="mt-1 text-sm text-red-600">{fieldErrors.photoUrl}</p>
+            )}
 
           </div>
 
@@ -243,9 +315,19 @@ const ProfilePage = () => {
             <input
               type="password"
               value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:border-primary focus:ring-primary px-3 py-2"
+              onChange={e => {
+                setPassword(e.target.value);
+                setFieldErrors(prev => ({ ...prev, password: '' }));
+              }}
+              className={`mt-1 block w-full rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 focus:ring-primary px-3 py-2 ${
+                fieldErrors.password
+                  ? 'border-red-500 focus:border-red-500 dark:border-red-500'
+                  : 'border-gray-300 dark:border-slate-700 focus:border-primary'
+              }`}
             />
+            {fieldErrors.password && (
+              <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+            )}
 
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
               Leave blank to keep your current password. Updating password may require recent login.

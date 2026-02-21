@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env.js';
+import { AppError } from '../utils/AppError.js';
 
 const adminAllowlist = String(env.ADMIN_EMAIL_ALLOWLIST || '')
   .split(',')
@@ -29,16 +30,16 @@ export function authRequired(req, res, next) {
 
     const bearer = req.headers.authorization || '';
     const token = (bearer.startsWith('Bearer ') ? bearer.slice(7) : null) || req.cookies?.token;
-    if (!token) return res.status(401).json({ error: 'Unauthorized' });
+    if (!token) return next(new AppError(401, 'Unauthorized', 'UNAUTHORIZED'));
     const payload = jwt.verify(token, env.JWT_SECRET);
     req.user = payload; // { id, role, email }
     next();
   } catch (e) {
-    return res.status(401).json({ error: 'Unauthorized' });
+    return next(new AppError(401, 'Unauthorized', 'UNAUTHORIZED'));
   }
 }
 
 export function requireAdmin(req, res, next) {
   if (req.user?.role === 'admin') return next();
-  return res.status(403).json({ error: 'Forbidden' });
+  return next(new AppError(403, 'Forbidden', 'FORBIDDEN'));
 }

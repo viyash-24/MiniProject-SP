@@ -1,55 +1,115 @@
 import { ParkingArea } from '../models/ParkingArea.js';
 import { io } from '../index.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError } from '../utils/AppError.js';
 
-export async function listParkingAreas(_req, res) {
+const toTrimmedString = (value) => String(value ?? '').trim();
+
+const parseCount = (value) => {
+  if (value === undefined || value === null || value === '') return 0;
+  return Number(value);
+};
+
+const validateNonNegativeInt = (n) => Number.isFinite(n) && Number.isInteger(n) && n >= 0;
+
+const validateLat = (n) => Number.isFinite(n) && n >= -90 && n <= 90;
+const validateLng = (n) => Number.isFinite(n) && n >= -180 && n <= 180;
+
+const isValidHttpUrl = (value) => {
+  const v = toTrimmedString(value);
+  if (!v) return false; // Empty is invalid when required
   try {
-    const parkingAreas = await ParkingArea.find().sort({ createdAt: -1 });
-    res.json({ parkingAreas });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch parking areas' });
+    const u = new URL(v);
+    return u.protocol === 'http:' || u.protocol === 'https:';
+  } catch (_) {
+    return false;
   }
-}
+};
+
+// Helper to check if a value is provided (not empty/null/undefined)
+const isProvided = (value) => value !== undefined && value !== null && value !== '';
+
+export const listParkingAreas = asyncHandler(async (_req, res) => {
+  const parkingAreas = await ParkingArea.find().sort({ createdAt: -1 });
+  res.json({ parkingAreas });
+});
 
 
-export async function createParkingArea(req, res) {
-  try {
-    const { name, address, location, photo, slotAmount, carSlots, bikeSlots, vanSlots, threeWheelerSlots } = req.body;
-    const adminEmail = req.headers['x-admin-email'];
+export const createParkingArea = asyncHandler(async (req, res) => {
+  const { name, address, location, photo, slotAmount, totalSlots, carSlots, bikeSlots, vanSlots, threeWheelerSlots } = req.body || {};
+  const adminEmail = req.headers['x-admin-email'];
 
-    if (!name || !address || !location) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
+  const trimmedName = toTrimmedString(name);
+  const trimmedAddress = toTrimmedString(address);
+  const trimmedPhoto = toTrimmedString(photo);
 
-    if (!location.latitude || !location.longitude) {
-      return res.status(400).json({ error: 'Location coordinates are required' });
-    }
+  if (!adminEmail) {
+    throw new AppError(401, 'Missing admin identity', 'MISSING_ADMIN_EMAIL');
+  }
 
-    // Determine totals based on per-type counts if provided
-    const c = Number(carSlots || 0);
-    const b = Number(bikeSlots || 0);
-    const v = Number(vanSlots || 0);
-    const t = Number(threeWheelerSlots || 0);
-    const sumTyped = c + b + v + t;
-    const total = sumTyped > 0 ? sumTyped : Number(slotAmount || 0);
+  // Collect all missing required fields
+  const missingFields = [];
+  if (!trimmedName) missingFields.push('name');
+  if (!trimmedAddress) missingFields.push('address');
+  if (!location) missingFields.push('location');
+  if (!isProvided(location?.latitude)) missingFields.push('location.latitude');
+  if (!isProvided(location?.longitude)) missingFields.push('location.longitude');
+  if (!trimmedPhoto) missingFields.push('photo');
+  if (!isProvided(carSlots)) missingFields.push('carSlots');
+  if (!isProvided(bikeSlots)) missingFields.push('bikeSlots');
+  if (!isProvided(vanSlots)) missingFields.push('vanSlots');
+  if (!isProvided(threeWheelerSlots)) missingFields.push('threeWheelerSlots');
 
-    if (!total || total <= 0) {
-      return res.status(400).json({ error: 'Total slots must be greater than 0' });
-    }
+  if (missingFields.length > 0) {
+    throw new AppError(400, 'All fields are required', 'MISSING_FIELDS', { required: missingFields });
+  }
 
-    const parkingArea = await ParkingArea.create({
-      name,
-      address,
-      location,
-      photo,
-      carSlots: c,
-      bikeSlots: b,
-      vanSlots: v,
-      threeWheelerSlots: t,
-      totalSlots: total,
-      availableSlots: total, // Initially all slots are available
-      occupiedSlots: 0,
-      createdBy: adminEmail
-    });
+  const lat = Number(location.latitude);
+  const lng = Number(location.longitude);
+  if (!validateLat(lat)) {
+    throw new AppError(400, 'Latitude must be between -90 and 90', 'INVALID_LATITUDE');
+  }
+  if (!validateLng(lng)) {
+    throw new AppError(400, 'Longitude must be between -180 and 180', 'INVALID_LONGITUDE');
+  }
+
+  if (!isValidHttpUrl(trimmedPhoto)) {
+    throw new AppError(400, 'Photo must be a valid http/https URL', 'INVALID_PHOTO_URL');
+  }
+
+  const c = parseCount(carSlots);
+  const b = parseCount(bikeSlots);
+  const v = parseCount(vanSlots);
+  const t = parseCount(threeWheelerSlots);
+  const fieldErrors = {};
+  if (!validateNonNegativeInt(c)) fieldErrors.carSlots = 'Car slots must be a whole number >= 0';
+  if (!validateNonNegativeInt(b)) fieldErrors.bikeSlots = 'Bike slots must be a whole number >= 0';
+  if (!validateNonNegativeInt(v)) fieldErrors.vanSlots = 'Van slots must be a whole number >= 0';
+  if (!validateNonNegativeInt(t)) fieldErrors.threeWheelerSlots = 'Three-wheeler slots must be a whole number >= 0';
+  if (Object.keys(fieldErrors).length > 0) {
+    throw new AppError(400, 'Invalid slot counts', 'INVALID_SLOT_COUNTS', { fields: fieldErrors });
+  }
+
+  const sumTyped = c + b + v + t;
+  const totalCandidate = sumTyped > 0 ? sumTyped : Number(slotAmount ?? totalSlots ?? 0);
+  if (!Number.isFinite(totalCandidate) || !Number.isInteger(totalCandidate) || totalCandidate <= 0) {
+    throw new AppError(400, 'Total slots must be a whole number greater than 0', 'INVALID_TOTAL_SLOTS');
+  }
+
+  const parkingArea = await ParkingArea.create({
+    name: trimmedName,
+    address: trimmedAddress,
+    location: { latitude: lat, longitude: lng },
+    photo: trimmedPhoto,
+    carSlots: c,
+    bikeSlots: b,
+    vanSlots: v,
+    threeWheelerSlots: t,
+    totalSlots: totalCandidate,
+    availableSlots: totalCandidate, // Initially all slots are available
+    occupiedSlots: 0,
+    createdBy: adminEmail
+  });
 
     // Emit socket event for new parking area
     io.emit('parkingArea:created', {
@@ -58,53 +118,119 @@ export async function createParkingArea(req, res) {
     });
 
     res.status(201).json({ parkingArea });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to create parking area' });
-  }
-}
+});
 
-export async function updateParkingArea(req, res) {
-  try {
-    const { id } = req.params;
-    const { name, address, location, photo, slotAmount, carSlots, bikeSlots, vanSlots, threeWheelerSlots, active } = req.body;
+export const updateParkingArea = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, address, location, photo, slotAmount, totalSlots, carSlots, bikeSlots, vanSlots, threeWheelerSlots, active } = req.body || {};
 
     // If slotAmount is being updated, we need to adjust availableSlots accordingly
     const existingArea = await ParkingArea.findById(id);
     if (!existingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
+      throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
     }
 
-    let updateData = { name, address, location, photo, active };
+    const updateData = {};
+
+    if (name !== undefined) {
+      const trimmed = toTrimmedString(name);
+      if (!trimmed) throw new AppError(400, 'Area name is required', 'MISSING_FIELDS', { required: ['name'] });
+      updateData.name = trimmed;
+    }
+
+    if (address !== undefined) {
+      const trimmed = toTrimmedString(address);
+      if (!trimmed) throw new AppError(400, 'Address is required', 'MISSING_FIELDS', { required: ['address'] });
+      updateData.address = trimmed;
+    }
+
+    if (photo !== undefined) {
+      const trimmed = toTrimmedString(photo);
+      if (trimmed && !isValidHttpUrl(trimmed)) {
+        throw new AppError(400, 'Photo must be a valid http/https URL', 'INVALID_PHOTO_URL');
+      }
+      updateData.photo = trimmed || '';
+    }
+
+    if (location !== undefined) {
+      const lat = Number(location?.latitude);
+      const lng = Number(location?.longitude);
+      if (location?.latitude === undefined || location?.latitude === null || location?.latitude === '' ||
+          location?.longitude === undefined || location?.longitude === null || location?.longitude === '') {
+        throw new AppError(400, 'Location coordinates are required', 'MISSING_FIELDS', { required: ['location.latitude', 'location.longitude'] });
+      }
+      if (!validateLat(lat)) {
+        throw new AppError(400, 'Latitude must be between -90 and 90', 'INVALID_LATITUDE');
+      }
+      if (!validateLng(lng)) {
+        throw new AppError(400, 'Longitude must be between -180 and 180', 'INVALID_LONGITUDE');
+      }
+      updateData.location = { latitude: lat, longitude: lng };
+    }
+
+    if (active !== undefined) updateData.active = Boolean(active);
 
     // Decide target totals
+    const desiredTotalRaw = slotAmount ?? totalSlots;
     const hasTyped = [carSlots, bikeSlots, vanSlots, threeWheelerSlots].some(v => v !== undefined && v !== null);
+
+    let nextTotal = undefined;
+    let nextTypedSum = undefined;
+
     if (hasTyped) {
-      const c = Number(carSlots ?? existingArea.carSlots ?? 0);
-      const b = Number(bikeSlots ?? existingArea.bikeSlots ?? 0);
-      const v = Number(vanSlots ?? existingArea.vanSlots ?? 0);
-      const t = Number(threeWheelerSlots ?? existingArea.threeWheelerSlots ?? 0);
-      const sum = c + b + v + t;
+      const c = parseCount(carSlots ?? existingArea.carSlots ?? 0);
+      const b = parseCount(bikeSlots ?? existingArea.bikeSlots ?? 0);
+      const v = parseCount(vanSlots ?? existingArea.vanSlots ?? 0);
+      const t = parseCount(threeWheelerSlots ?? existingArea.threeWheelerSlots ?? 0);
+      const fieldErrors = {};
+      if (!validateNonNegativeInt(c)) fieldErrors.carSlots = 'Car slots must be a whole number >= 0';
+      if (!validateNonNegativeInt(b)) fieldErrors.bikeSlots = 'Bike slots must be a whole number >= 0';
+      if (!validateNonNegativeInt(v)) fieldErrors.vanSlots = 'Van slots must be a whole number >= 0';
+      if (!validateNonNegativeInt(t)) fieldErrors.threeWheelerSlots = 'Three-wheeler slots must be a whole number >= 0';
+      if (Object.keys(fieldErrors).length > 0) {
+        throw new AppError(400, 'Invalid slot counts', 'INVALID_SLOT_COUNTS', { fields: fieldErrors });
+      }
+
       updateData.carSlots = c;
       updateData.bikeSlots = b;
       updateData.vanSlots = v;
       updateData.threeWheelerSlots = t;
-      if (sum > 0 && sum !== existingArea.totalSlots) {
-        const diff = sum - existingArea.totalSlots;
-        updateData.totalSlots = sum;
-        updateData.availableSlots = Math.max(0, (existingArea.availableSlots ?? 0) + diff);
+      nextTypedSum = c + b + v + t;
+      if (nextTypedSum > 0) nextTotal = nextTypedSum;
+    }
+
+    if (nextTotal === undefined && desiredTotalRaw !== undefined && desiredTotalRaw !== null && desiredTotalRaw !== '') {
+      const candidate = Number(desiredTotalRaw);
+      if (!Number.isFinite(candidate) || !Number.isInteger(candidate) || candidate <= 0) {
+        throw new AppError(400, 'Total slots must be a whole number greater than 0', 'INVALID_TOTAL_SLOTS');
       }
-    } else if (slotAmount && slotAmount !== existingArea.totalSlots) {
-      // Fallback to legacy single total update
-      const slotDifference = slotAmount - existingArea.totalSlots;
-      updateData.totalSlots = slotAmount;
-      updateData.availableSlots = Math.max(0, existingArea.availableSlots + slotDifference);
+      nextTotal = candidate;
+    }
+
+    if (nextTotal !== undefined && nextTotal !== existingArea.totalSlots) {
+      const occupied = Number.isFinite(Number(existingArea.occupiedSlots))
+        ? Number(existingArea.occupiedSlots)
+        : Math.max(0, Number(existingArea.totalSlots || 0) - Number(existingArea.availableSlots || 0));
+
+      if (nextTotal < occupied) {
+        throw new AppError(400, `Total slots cannot be less than occupied slots (${occupied})`, 'INVALID_TOTAL_SLOTS');
+      }
+      updateData.totalSlots = nextTotal;
+      updateData.availableSlots = Math.max(0, nextTotal - occupied);
+    } else if (hasTyped && nextTypedSum !== undefined && nextTypedSum <= 0 && desiredTotalRaw === undefined) {
+      // If they explicitly set typed counts but sum is 0, require a total.
+      throw new AppError(400, 'Provide total slots or per-type counts > 0', 'INVALID_TOTAL_SLOTS');
     }
 
     const parkingArea = await ParkingArea.findByIdAndUpdate(
       id,
       { $set: updateData },
-      { new: true }
+      { new: true, runValidators: true }
     );
+
+    if (!parkingArea) {
+      throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
+    }
 
     // Emit socket event for updated parking area
     io.emit('parkingArea:updated', {
@@ -113,18 +239,14 @@ export async function updateParkingArea(req, res) {
     });
 
     res.json({ parkingArea });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to update parking area' });
-  }
-}
+});
 
-export async function deleteParkingArea(req, res) {
-  try {
-    const { id } = req.params;
-    const parkingArea = await ParkingArea.findByIdAndDelete(id);
+export const deleteParkingArea = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const parkingArea = await ParkingArea.findByIdAndDelete(id);
 
     if (!parkingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
+      throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
     }
 
     // Emit socket event for deleted parking area
@@ -134,46 +256,32 @@ export async function deleteParkingArea(req, res) {
     });
 
     res.json({ message: 'Parking area deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to delete parking area' });
-  }
-}
+});
 
-export async function getParkingArea(req, res) {
-  try {
-    const { id } = req.params;
-    const parkingArea = await ParkingArea.findById(id);
+export const getParkingArea = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const parkingArea = await ParkingArea.findById(id);
 
     if (!parkingArea) {
-      return res.status(404).json({ error: 'Parking area not found' });
+      throw new AppError(404, 'Parking area not found', 'PARKING_AREA_NOT_FOUND');
     }
 
     res.json({ parkingArea });
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch parking area' });
-  }
-}
+});
 
-export async function listPublicParkingAreas(req, res) {
-  try {
-    // Parse pagination parameters with defaults
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
+export const listPublicParkingAreas = asyncHandler(async (req, res) => {
+  // Parse pagination parameters with defaults
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const skip = (page - 1) * limit;
 
     // Input validation
     if (isNaN(page) || page < 1) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Invalid page number. Must be a positive integer.' 
-      });
+      throw new AppError(400, 'Invalid page number. Must be a positive integer.', 'VALIDATION_ERROR');
     }
 
     if (isNaN(limit) || limit < 1 || limit > 100) {
-      return res.status(400).json({ 
-        success: false,
-        error: 'Invalid limit. Must be between 1 and 100.' 
-      });
+      throw new AppError(400, 'Invalid limit. Must be between 1 and 100.', 'VALIDATION_ERROR');
     }
 
     // Get total count for pagination
@@ -262,37 +370,14 @@ export async function listPublicParkingAreas(req, res) {
     };
 
     res.json(response);
+});
 
-  } catch (error) {
-    console.error('Error in listPublicParkingAreas:', error);
-    
-    // Different error handling based on error type
-    if (error.name === 'CastError') {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid query parameters',
-        details: error.message
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      error: 'An unexpected error occurred while fetching parking areas',
-      requestId: req.id // Assuming you're using express-request-id or similar
-    });
-  }
-}
-
-export async function getPublicParkingArea(req, res) {
-  try {
-    const { id } = req.params;
-    const parkingArea = await ParkingArea.findById(id).lean();
+export const getPublicParkingArea = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const parkingArea = await ParkingArea.findById(id).lean();
 
     if (!parkingArea || !parkingArea.active) {
-      return res.status(404).json({
-        success: false,
-        error: 'Parking area not found or inactive'
-      });
+      throw new AppError(404, 'Parking area not found or inactive', 'PARKING_AREA_NOT_FOUND');
     }
 
     const Vehicle = (await import('../models/Vehicle.js')).Vehicle;
@@ -338,19 +423,4 @@ export async function getPublicParkingArea(req, res) {
         availableByType
       }
     });
-  } catch (error) {
-    console.error('Error in getPublicParkingArea:', error);
-    if (error.name === 'CastError') {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid parking area id',
-        details: error.message
-      });
-    }
-
-    res.status(500).json({
-      success: false,
-      error: 'An unexpected error occurred while fetching parking area details'
-    });
-  }
-}
+});

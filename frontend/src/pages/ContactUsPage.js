@@ -9,19 +9,51 @@ const ContactUsPage = () => {
     subject: '',
     message: ''
   });
+  const [fieldErrors, setFieldErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+  const isValidPhone = (phone) => {
+    const digits = String(phone || '').replace(/\D/g, '');
+    return !digits || (digits.length >= 7 && digits.length <= 15);
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFieldErrors((prev) => ({ ...prev, [e.target.name]: undefined }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate all fields
+    const errors = {};
+    const trimmedName = String(formData.name || '').trim();
+    const trimmedEmail = String(formData.email || '').trim();
+    const trimmedPhone = String(formData.phone || '').trim();
+    const trimmedSubject = String(formData.subject || '').trim();
+    const trimmedMessage = String(formData.message || '').trim();
+    
+    if (!trimmedName) errors.name = 'Full name is required';
+    if (!trimmedEmail) errors.email = 'Email is required';
+    else if (!isValidEmail(trimmedEmail)) errors.email = 'Please enter a valid email address';
+    if (trimmedPhone && !isValidPhone(trimmedPhone)) errors.phone = 'Please enter a valid phone number';
+    if (!trimmedSubject) errors.subject = 'Subject is required';
+    if (!trimmedMessage) errors.message = 'Message is required';
+    else if (trimmedMessage.length < 10) errors.message = 'Message must be at least 10 characters';
+    
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error('Please fix the highlighted fields');
+      return;
+    }
+    
     setIsSubmitting(true);
 
     setTimeout(() => {
       toast.success('Thank you for contacting us! We will get back to you soon.');
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setFieldErrors({});
       setIsSubmitting(false);
     }, 1000);
   };
@@ -43,10 +75,10 @@ const ContactUsPage = () => {
             <h2 className="text-3xl font-bold text-gray-900 dark:text-slate-50 mb-6">Send us a message</h2>
             <form onSubmit={handleSubmit} className="space-y-5">
               {[
-                { label: 'Full Name', name: 'name', type: 'text', placeholder: 'John Doe', required: true },
-                { label: 'Email Address', name: 'email', type: 'email', placeholder: 'john@example.com', required: true },
-                { label: 'Phone Number', name: 'phone', type: 'tel', placeholder: '+1 (555) 123-4567', required: false },
-                { label: 'Subject', name: 'subject', type: 'text', placeholder: 'How can we help?', required: true }
+                { label: 'Full Name', name: 'name', type: 'text', placeholder: 'John Doe' },
+                { label: 'Email Address', name: 'email', type: 'email', placeholder: 'john@example.com' },
+                { label: 'Phone Number', name: 'phone', type: 'tel', placeholder: '+1 (555) 123-4567' },
+                { label: 'Subject', name: 'subject', type: 'text', placeholder: 'How can we help?' }
               ].map((field) => (
                 <div key={field.name}>
                   <label className="block text-sm font-medium text-gray-700 dark:text-slate-200 mb-2">{field.label}</label>
@@ -56,9 +88,13 @@ const ContactUsPage = () => {
                     value={formData[field.name]}
                     onChange={handleChange}
                     placeholder={field.placeholder}
-                    required={field.required}
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                    className={`w-full px-4 py-3 border bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                      fieldErrors[field.name] ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300 dark:border-slate-700'
+                    }`}
                   />
+                  {fieldErrors[field.name] && (
+                    <p className="mt-1 text-sm text-red-600">{fieldErrors[field.name]}</p>
+                  )}
                 </div>
               ))}
 
@@ -69,10 +105,14 @@ const ContactUsPage = () => {
                   value={formData.message}
                   onChange={handleChange}
                   rows="6"
-                  required
                   placeholder="Tell us more about your inquiry..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${
+                    fieldErrors.message ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                 />
+                {fieldErrors.message && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.message}</p>
+                )}
               </div>
 
               <button

@@ -40,8 +40,17 @@ const AdminSlotManagementPage = () => {
   });
   const [registerLoading, setRegisterLoading] = useState(false);
   const [registerError, setRegisterError] = useState('');
+  const [registerFieldErrors, setRegisterFieldErrors] = useState({});
   const [showSlotPopup, setShowSlotPopup] = useState(false);
   const [areaTypeMap, setAreaTypeMap] = useState({});
+
+  // Validation helpers
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+  const isValidPhone = (phone) => {
+    const digits = String(phone || '').replace(/\D/g, '');
+    return !digits || (digits.length >= 7 && digits.length <= 15);
+  };
+  const isValidPlate = (plate) => /^[A-Z0-9-]{4,15}$/i.test(String(plate || '').trim());
 
   // Fetch per-type slot counts for mapping-based filtering in modal
   useEffect(() => {
@@ -100,11 +109,37 @@ const AdminSlotManagementPage = () => {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    setRegisterLoading(true);
     setRegisterError('');
+    
+    // Validate all fields
+    const errors = {};
+    const trimmedPlate = String(registerForm.plate || '').trim().toUpperCase();
+    const trimmedEmail = String(registerForm.userEmail || '').trim();
+    const trimmedName = String(registerForm.userName || '').trim();
+    const trimmedPhone = String(registerForm.userPhone || '').trim();
+    
+    if (!selectedParkingArea) errors.parkingArea = 'Please select a parking area';
+    if (!registerForm.slotNumber) errors.slotNumber = 'Please select a slot';
+    if (!trimmedPlate) errors.plate = 'Vehicle plate is required';
+    else if (!isValidPlate(trimmedPlate)) errors.plate = 'Plate must be 4-15 characters (A-Z, 0-9, -)';
+    if (!trimmedName) errors.userName = 'User name is required';
+    if (!trimmedEmail) errors.userEmail = 'User email is required';
+    else if (!isValidEmail(trimmedEmail)) errors.userEmail = 'Please enter a valid email address';
+    if (trimmedPhone && !isValidPhone(trimmedPhone)) errors.userPhone = 'Please enter a valid phone number';
+    
+    setRegisterFieldErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+    
+    setRegisterLoading(true);
 
     try {
-      await registerUserAndAssignSlot(registerForm);
+      await registerUserAndAssignSlot({
+        ...registerForm,
+        plate: trimmedPlate,
+        userEmail: trimmedEmail,
+        userName: trimmedName,
+        userPhone: trimmedPhone
+      });
       setRegisterForm({
         plate: '',
         userEmail: '',
@@ -115,6 +150,7 @@ const AdminSlotManagementPage = () => {
         slotNumber: '',
         createdBy: 'admin'
       });
+      setRegisterFieldErrors({});
       setShowRegisterForm(false);
       setSelectedParkingArea('');
       setAvailableSlots([]);
@@ -201,41 +237,63 @@ const AdminSlotManagementPage = () => {
               )}
               <form onSubmit={handleRegisterSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <select
-                    value={selectedParkingArea}
-                    onChange={(e) => {
-                      setSelectedParkingArea(e.target.value);
-                      handleParkingAreaChange(e.target.value);
-                    }}
-                    className="px-4 py-2 rounded-lg border border-input bg-background"
-                    required
-                  >
-                    <option value="">Select Parking Area</option>
-                    {parkingAreas.map(area => (
-                      <option key={area._id} value={area._id}>{area.name}</option>
-                    ))}
-                  </select>
+                  <div>
+                    <select
+                      value={selectedParkingArea}
+                      onChange={(e) => {
+                        setSelectedParkingArea(e.target.value);
+                        handleParkingAreaChange(e.target.value);
+                        setRegisterFieldErrors(prev => ({ ...prev, parkingArea: undefined }));
+                      }}
+                      className={`w-full px-4 py-2 rounded-lg border bg-background ${
+                        registerFieldErrors.parkingArea ? 'border-red-500' : 'border-input'
+                      }`}
+                    >
+                      <option value="">Select Parking Area</option>
+                      {parkingAreas.map(area => (
+                        <option key={area._id} value={area._id}>{area.name}</option>
+                      ))}
+                    </select>
+                    {registerFieldErrors.parkingArea && (
+                      <p className="mt-1 text-sm text-red-600">{registerFieldErrors.parkingArea}</p>
+                    )}
+                  </div>
                   
-                  <div className="flex gap-2">
-                    <input
-                      value={registerForm.slotNumber}
-                      readOnly
-                      placeholder="Slot Number"
-                      className="flex-1 px-4 py-2 rounded-lg border border-input bg-muted"
-                      required
-                    />
-                    <Button type="button" variant="outline" onClick={async () => { if (selectedParkingArea) { try { const data = await getAvailableSlots(selectedParkingArea, registerForm.vehicleType); setAvailableSlots(data.availableSlots); } catch(_){} } setShowSlotPopup(true); }} disabled={!selectedParkingArea}>
-                      Select Slot
-                    </Button>
+                  <div>
+                    <div className="flex gap-2">
+                      <input
+                        value={registerForm.slotNumber}
+                        readOnly
+                        placeholder="Slot Number"
+                        className={`flex-1 px-4 py-2 rounded-lg border bg-muted ${
+                          registerFieldErrors.slotNumber ? 'border-red-500' : 'border-input'
+                        }`}
+                      />
+                      <Button type="button" variant="outline" onClick={async () => { if (selectedParkingArea) { try { const data = await getAvailableSlots(selectedParkingArea, registerForm.vehicleType); setAvailableSlots(data.availableSlots); } catch(_){} } setShowSlotPopup(true); }} disabled={!selectedParkingArea}>
+                        Select Slot
+                      </Button>
+                    </div>
+                    {registerFieldErrors.slotNumber && (
+                      <p className="mt-1 text-sm text-red-600">{registerFieldErrors.slotNumber}</p>
+                    )}
                   </div>
 
-                  <input
-                    placeholder="Vehicle Plate"
-                    value={registerForm.plate}
-                    onChange={(e) => setRegisterForm({...registerForm, plate: e.target.value})}
-                    className="px-4 py-2 rounded-lg border border-input bg-background"
-                    required
-                  />
+                  <div>
+                    <input
+                      placeholder="Vehicle Plate"
+                      value={registerForm.plate}
+                      onChange={(e) => {
+                        setRegisterForm({...registerForm, plate: e.target.value});
+                        setRegisterFieldErrors(prev => ({ ...prev, plate: undefined }));
+                      }}
+                      className={`w-full px-4 py-2 rounded-lg border bg-background ${
+                        registerFieldErrors.plate ? 'border-red-500' : 'border-input'
+                      }`}
+                    />
+                    {registerFieldErrors.plate && (
+                      <p className="mt-1 text-sm text-red-600">{registerFieldErrors.plate}</p>
+                    )}
+                  </div>
                   <select
                     value={registerForm.vehicleType}
                     onChange={(e) => handleVehicleTypeChange(e.target.value)}
@@ -246,21 +304,39 @@ const AdminSlotManagementPage = () => {
                     <option value="Van">Van</option>
                     <option value="Three-wheeler">Three-wheeler</option>
                   </select>
-                  <input
-                    placeholder="User Name"
-                    value={registerForm.userName}
-                    onChange={(e) => setRegisterForm({...registerForm, userName: e.target.value})}
-                    className="px-4 py-2 rounded-lg border border-input bg-background"
-                    required
-                  />
-                  <input
-                    placeholder="User Email"
-                    type="email"
-                    value={registerForm.userEmail}
-                    onChange={(e) => setRegisterForm({...registerForm, userEmail: e.target.value})}
-                    className="px-4 py-2 rounded-lg border border-input bg-background"
-                    required
-                  />
+                  <div>
+                    <input
+                      placeholder="User Name"
+                      value={registerForm.userName}
+                      onChange={(e) => {
+                        setRegisterForm({...registerForm, userName: e.target.value});
+                        setRegisterFieldErrors(prev => ({ ...prev, userName: undefined }));
+                      }}
+                      className={`w-full px-4 py-2 rounded-lg border bg-background ${
+                        registerFieldErrors.userName ? 'border-red-500' : 'border-input'
+                      }`}
+                    />
+                    {registerFieldErrors.userName && (
+                      <p className="mt-1 text-sm text-red-600">{registerFieldErrors.userName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <input
+                      placeholder="User Email"
+                      type="email"
+                      value={registerForm.userEmail}
+                      onChange={(e) => {
+                        setRegisterForm({...registerForm, userEmail: e.target.value});
+                        setRegisterFieldErrors(prev => ({ ...prev, userEmail: undefined }));
+                      }}
+                      className={`w-full px-4 py-2 rounded-lg border bg-background ${
+                        registerFieldErrors.userEmail ? 'border-red-500' : 'border-input'
+                      }`}
+                    />
+                    {registerFieldErrors.userEmail && (
+                      <p className="mt-1 text-sm text-red-600">{registerFieldErrors.userEmail}</p>
+                    )}
+                  </div>
                 </div>
                 <Button type="submit" disabled={registerLoading} className="w-full">
                   {registerLoading ? 'Registering...' : 'Register & Assign Slot'}

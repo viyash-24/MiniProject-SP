@@ -1,157 +1,119 @@
 import { ParkingCharge } from '../models/ParkingCharge.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import { AppError } from '../utils/AppError.js';
 
 // Get all parking charges
-export async function listParkingCharges(req, res) {
-  try {
-    const charges = await ParkingCharge.find().sort({ vehicleType: 1 });
-    res.json({ success: true, charges });
-  } catch (error) {
-    console.error('Error fetching parking charges:', error);
-    res.status(500).json({ error: 'Failed to fetch parking charges' });
-  }
-}
+export const listParkingCharges = asyncHandler(async (req, res) => {
+  const charges = await ParkingCharge.find().sort({ vehicleType: 1 });
+  res.json({ success: true, charges });
+});
 
 // Get active parking charges (for users)
-export async function getActiveParkingCharges(req, res) {
-  try {
-    const charges = await ParkingCharge.find({ isActive: true }).sort({ vehicleType: 1 });
-    res.json({ success: true, charges });
-  } catch (error) {
-    console.error('Error fetching active parking charges:', error);
-    res.status(500).json({ error: 'Failed to fetch parking charges' });
-  }
-}
+export const getActiveParkingCharges = asyncHandler(async (req, res) => {
+  const charges = await ParkingCharge.find({ isActive: true }).sort({ vehicleType: 1 });
+  res.json({ success: true, charges });
+});
 
 // Get parking charge by vehicle type
-export async function getParkingChargeByType(req, res) {
-  try {
-    const { vehicleType } = req.params;
-    const charge = await ParkingCharge.findOne({ vehicleType, isActive: true });
-    
-    if (!charge) {
-      return res.status(404).json({ error: 'Parking charge not found for this vehicle type' });
-    }
-    
-    res.json({ success: true, charge });
-  } catch (error) {
-    console.error('Error fetching parking charge:', error);
-    res.status(500).json({ error: 'Failed to fetch parking charge' });
-  }
-}
+export const getParkingChargeByType = asyncHandler(async (req, res) => {
+  const { vehicleType } = req.params;
+  if (!vehicleType) throw new AppError(400, 'vehicleType is required', 'MISSING_FIELDS');
+
+  const charge = await ParkingCharge.findOne({ vehicleType, isActive: true });
+  if (!charge) throw new AppError(404, 'Parking charge not found for this vehicle type', 'PARKING_CHARGE_NOT_FOUND');
+
+  res.json({ success: true, charge });
+});
 
 // Create a new parking charge
-export async function createParkingCharge(req, res) {
-  try {
-    const { vehicleType, amount, description, duration } = req.body;
-    const adminEmail = req.headers['x-admin-email'] || 'admin@system.com';
+export const createParkingCharge = asyncHandler(async (req, res) => {
+  const { vehicleType, amount, description, duration } = req.body || {};
+  const adminEmail = req.headers['x-admin-email'] || 'admin@system.com';
 
-    // Check if charge already exists for this vehicle type
-    const existingCharge = await ParkingCharge.findOne({ vehicleType });
-    if (existingCharge) {
-      return res.status(400).json({ error: 'Parking charge already exists for this vehicle type' });
-    }
-
-    const newCharge = await ParkingCharge.create({
-      vehicleType,
-      amount,
-      description: description || `Parking charge for ${vehicleType}`,
-      duration: duration || 'per hour',
-      createdBy: adminEmail,
-      updatedBy: adminEmail,
-    });
-
-    res.status(201).json({ success: true, charge: newCharge });
-  } catch (error) {
-    console.error('Error creating parking charge:', error);
-    res.status(500).json({ error: error.message || 'Failed to create parking charge' });
+  if (!vehicleType || amount === undefined || amount === null) {
+    throw new AppError(400, 'vehicleType and amount are required', 'MISSING_FIELDS', { required: ['vehicleType', 'amount'] });
   }
-}
+
+  const existingCharge = await ParkingCharge.findOne({ vehicleType });
+  if (existingCharge) throw new AppError(400, 'Parking charge already exists for this vehicle type', 'PARKING_CHARGE_EXISTS');
+
+  const newCharge = await ParkingCharge.create({
+    vehicleType,
+    amount,
+    description: description || `Parking charge for ${vehicleType}`,
+    duration: duration || 'per hour',
+    createdBy: adminEmail,
+    updatedBy: adminEmail,
+  });
+
+  res.status(201).json({ success: true, charge: newCharge });
+});
 
 // Update a parking charge
-export async function updateParkingCharge(req, res) {
-  try {
-    const { id } = req.params;
-    const { amount, description, duration, isActive } = req.body;
-    const adminEmail = req.headers['x-admin-email'] || 'admin@system.com';
+export const updateParkingCharge = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { amount, description, duration, isActive } = req.body || {};
+  const adminEmail = req.headers['x-admin-email'] || 'admin@system.com';
 
-    const charge = await ParkingCharge.findById(id);
-    if (!charge) {
-      return res.status(404).json({ error: 'Parking charge not found' });
-    }
+  const charge = await ParkingCharge.findById(id);
+  if (!charge) throw new AppError(404, 'Parking charge not found', 'PARKING_CHARGE_NOT_FOUND');
 
-    // Update fields
-    if (amount !== undefined) charge.amount = amount;
-    if (description !== undefined) charge.description = description;
-    if (duration !== undefined) charge.duration = duration;
-    if (isActive !== undefined) charge.isActive = isActive;
-    charge.updatedBy = adminEmail;
+  if (amount !== undefined) charge.amount = amount;
+  if (description !== undefined) charge.description = description;
+  if (duration !== undefined) charge.duration = duration;
+  if (isActive !== undefined) charge.isActive = isActive;
+  charge.updatedBy = adminEmail;
 
-    await charge.save();
-
-    res.json({ success: true, charge });
-  } catch (error) {
-    console.error('Error updating parking charge:', error);
-    res.status(500).json({ error: error.message || 'Failed to update parking charge' });
-  }
-}
+  await charge.save();
+  res.json({ success: true, charge });
+});
 
 // Delete a parking charge
-export async function deleteParkingCharge(req, res) {
-  try {
-    const { id } = req.params;
+export const deleteParkingCharge = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-    const charge = await ParkingCharge.findById(id);
-    if (!charge) {
-      return res.status(404).json({ error: 'Parking charge not found' });
-    }
+  const charge = await ParkingCharge.findById(id);
+  if (!charge) throw new AppError(404, 'Parking charge not found', 'PARKING_CHARGE_NOT_FOUND');
 
-    await ParkingCharge.findByIdAndDelete(id);
-
-    res.json({ success: true, message: 'Parking charge deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting parking charge:', error);
-    res.status(500).json({ error: 'Failed to delete parking charge' });
-  }
-}
+  await ParkingCharge.findByIdAndDelete(id);
+  res.json({ success: true, message: 'Parking charge deleted successfully' });
+});
 
 // Bulk update parking charges
-export async function bulkUpdateParkingCharges(req, res) {
-  try {
-    const { charges } = req.body;
-    const adminEmail = req.headers['x-admin-email'] || 'admin@system.com';
-    const results = [];
+export const bulkUpdateParkingCharges = asyncHandler(async (req, res) => {
+  const { charges } = req.body || {};
+  const adminEmail = req.headers['x-admin-email'] || 'admin@system.com';
+  if (!Array.isArray(charges)) {
+    throw new AppError(400, 'charges must be an array', 'VALIDATION_ERROR');
+  }
 
-    for (const charge of charges) {
-      const { vehicleType, amount, description, duration } = charge;
-      
-      // Check if charge exists
-      let existingCharge = await ParkingCharge.findOne({ vehicleType });
-      
-      if (existingCharge) {
-        // Update existing charge
-        existingCharge.amount = amount;
-        existingCharge.description = description || existingCharge.description;
-        existingCharge.duration = duration || existingCharge.duration;
-        existingCharge.updatedBy = adminEmail;
-        await existingCharge.save();
-        results.push(existingCharge);
-      } else {
-        // Create new charge
-        const newCharge = await ParkingCharge.create({
-          vehicleType,
-          amount,
-          description: description || `Parking charge for ${vehicleType}`,
-          duration: duration || 'per hour',
-          createdBy: adminEmail,
-          updatedBy: adminEmail,
-        });
-        results.push(newCharge);
-      }
+  const results = [];
+  for (const charge of charges) {
+    const { vehicleType, amount, description, duration } = charge || {};
+    if (!vehicleType || amount === undefined || amount === null) {
+      throw new AppError(400, 'vehicleType and amount are required for each charge', 'MISSING_FIELDS');
     }
 
-    res.json({ success: true, charges: results });
-  } catch (error) {
-    console.error('Error bulk updating parking charges:', error);
-    res.status(500).json({ error: 'Failed to bulk update parking charges' });
+    let existingCharge = await ParkingCharge.findOne({ vehicleType });
+    if (existingCharge) {
+      existingCharge.amount = amount;
+      existingCharge.description = description || existingCharge.description;
+      existingCharge.duration = duration || existingCharge.duration;
+      existingCharge.updatedBy = adminEmail;
+      await existingCharge.save();
+      results.push(existingCharge);
+    } else {
+      const newCharge = await ParkingCharge.create({
+        vehicleType,
+        amount,
+        description: description || `Parking charge for ${vehicleType}`,
+        duration: duration || 'per hour',
+        createdBy: adminEmail,
+        updatedBy: adminEmail,
+      });
+      results.push(newCharge);
+    }
   }
-}
+
+  res.json({ success: true, charges: results });
+});

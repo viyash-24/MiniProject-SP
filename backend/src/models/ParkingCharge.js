@@ -5,7 +5,7 @@ const parkingChargeSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    enum: ['Car', 'Bike', 'Van', 'Auto', 'Other'],
+    enum: ['Car', 'Bike', 'Van', 'Tuk', 'Other'],
   },
   amount: {
     type: Number,
