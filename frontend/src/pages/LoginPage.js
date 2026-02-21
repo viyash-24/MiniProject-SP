@@ -51,6 +51,7 @@ const LoginPage = () => {
     }
   };
 
+  // google sign-in handler
   const onGoogle = async () => {
     try {
       await loginWithGoogle();
