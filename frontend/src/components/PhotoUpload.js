@@ -4,7 +4,6 @@ import { Upload, Link as LinkIcon, X, Image as ImageIcon, Loader2 } from 'lucide
 import { Button } from './ui/button';
 import toast from 'react-hot-toast';
 
-// PhotoUpload component allows users to upload an image file or provide an image URL
 const PhotoUpload = ({ onPhotoChange, currentPhoto }) => {
   const [mode, setMode] = useState('upload'); // 'upload' or 'url'
   const [uploading, setUploading] = useState(false);
