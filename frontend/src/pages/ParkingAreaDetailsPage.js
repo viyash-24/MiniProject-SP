@@ -34,8 +34,8 @@ const ParkingAreaDetailsPage = () => {
       return;
     }
 
-    const fetchParkingArea = async () => {
-      setIsLoading(true);
+    const fetchParkingArea = async (showLoading = true) => {
+      if (showLoading) setIsLoading(true);
       try {
         const endpoint = isAdmin
           ? `${API_URL}/parking-areas/${id}`
@@ -67,15 +67,18 @@ const ParkingAreaDetailsPage = () => {
         setAvailableByType(normalizedParkingArea?.availableByType || { car: 0, bike: 0, van: 0, threeWheeler: 0 });
       } catch (error) {
         console.error('Error fetching parking area details:', error);
-        toast.error(error.message || 'Failed to fetch parking area details');
-        navigate('/dashboard'); 
+        // Only show toast error on initial load to avoid spamming user
+        if (showLoading) {
+            toast.error(error.message || 'Failed to fetch parking area details');
+            navigate('/dashboard'); 
+        }
       } finally {
-        setIsLoading(false);
+        if (showLoading) setIsLoading(false);
       }
     };
 
-    fetchParkingArea();
-    const interval = setInterval(fetchParkingArea, 10000);
+    fetchParkingArea(true);
+    const interval = setInterval(() => fetchParkingArea(false), 10000);
     return () => clearInterval(interval);
   }, [id, user, navigate, logout, API_URL, isAdmin]);
 
