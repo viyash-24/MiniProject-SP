@@ -86,7 +86,9 @@ app.use(notFound);
 
 // Error handler
 app.use(errorHandler);
-
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
+});
 // Start
 (async () => {
   await connectDB();
