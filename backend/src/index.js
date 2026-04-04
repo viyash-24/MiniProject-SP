@@ -32,46 +32,16 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = createServer(app);
 
-const parseOriginList = (value) =>
-  String(value || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-
-/*
-  CORS notes:
-  - Browsers enforce CORS based on the request Origin.
-  - When testing from another device on your LAN, the frontend Origin becomes
-    something like http://192.168.x.x:3000, which must be allowed.
-  - We keep credentials enabled, so we must NOT use `*`.
-*/
-const configuredOrigins = new Set([
-  ...parseOriginList(env.CORS_ORIGIN),
+/* Define frontend origins */
+const allowedOrigins = [
   'https://d2o2ph936bp75l.cloudfront.net',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000'
-]);
-
-const originRegexAllowlist = [
-  /^http:\/\/localhost:\d+$/,
-  /^http:\/\/127\.0\.0\.1:\d+$/,
-  /^http:\/\/(\d{1,3}\.){3}\d{1,3}:\d+$/,
-  /^https:\/\/localhost:\d+$/
+  'http://localhost:3000' // optional for local dev
 ];
-
-const isOriginAllowed = (origin) => {
-  if (!origin) return true;
-  if (configuredOrigins.has(origin)) return true;
-  if (env.NODE_ENV !== 'production') {
-    return originRegexAllowlist.some((re) => re.test(origin));
-  }
-  return false;
-};
 
 /* socket.io cors */
 const io = new Server(httpServer, {
   cors: {
-    origin: (origin, callback) => callback(null, isOriginAllowed(origin)),
+    origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -96,19 +66,19 @@ app.set('io', io);
 /*  Express cors */
 app.use(cors({
   origin: function (origin, callback) {
-    return callback(null, isOriginAllowed(origin));
+    if (!origin) return callback(null, true); // allow tools like Postman
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
   },
   credentials: true
 }));
 
 /* Middleware */
-app.use(
-  helmet({
-    // The default `same-origin` can cause browsers to block cross-origin API
-    // responses even when CORS is configured, surfacing as `TypeError: Failed to fetch`.
-    crossOriginResourcePolicy: { policy: 'cross-origin' }
-  })
-);
+app.use(helmet());
 app.use(cookieParser());
 app.use(express.json());
 app.use(morgan('dev'));
