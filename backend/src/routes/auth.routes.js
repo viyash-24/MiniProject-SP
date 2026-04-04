@@ -11,7 +11,5 @@ r.put('/me', authRequired, updateProfile);
 r.post('/logout', authRequired, logout);
 r.post('/enroll-email', enrollEmail);
 
-r.get('/test', (req, res) => {
-  res.send("Auth route working");
-});
+
 export default r;
