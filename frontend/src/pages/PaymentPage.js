@@ -28,7 +28,7 @@ const PaymentPage = () => {
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'https://d2o2ph936bp75l.cloudfront.net/api';
 
   // Fetch vehicles and charges
   useEffect(() => {
