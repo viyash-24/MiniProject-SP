@@ -4,7 +4,7 @@ export const env = {
   PORT: process.env.PORT || 5000,
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb+srv://viyashviyashan:iAc2OUOFuwawg9Mw@smartpark.sr4npop.mongodb.net/?retryWrites=true&w=majority&appName=smartPark',
   JWT_SECRET: process.env.JWT_SECRET || 'smart_parking_secure_jwt_secret_2025',
-  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://smpark-frontend.s3-website-us-east-1.amazonaws.com',
   EMAIL_USER: process.env.EMAIL_USER || 'viyashviyashan24@gmail.com',
   EMAIL_PASS: process.env.EMAIL_PASS || 'fgfz mstp kkhi qwgm',
   EMAIL_FROM: process.env.EMAIL_FROM || 'Smart_Parking'  ,
