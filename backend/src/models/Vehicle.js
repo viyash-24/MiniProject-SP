@@ -8,7 +8,7 @@ const vehicleSchema = new mongoose.Schema({
   userPhone: { type: String },
   vehicleType: { 
     type: String, 
-    enum: ['Car', 'Bike',  'Scooter','van' ,'Other'],
+    enum: ['Car', 'Bike', 'Van', 'SUV', 'Truck', 'Scooter', 'Bicycle', 'Auto', 'Three-wheeler', 'Other'],
     default: 'Car',
     required: true 
   },
