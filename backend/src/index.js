@@ -34,7 +34,7 @@ const httpServer = createServer(app);
 
 /* Define frontend origins */
 const allowedOrigins = [
-  'http://smpark-frontend.s3-website-us-east-1.amazonaws.com',
+  'https://d2o2ph936bp75l.cloudfront.net',
   'http://localhost:3000' // optional for local dev
 ];
 
