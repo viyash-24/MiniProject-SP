@@ -18,6 +18,7 @@ const validateLng = (n) => Number.isFinite(n) && n >= -180 && n <= 180;
 const isValidHttpUrl = (value) => {
   const v = toTrimmedString(value);
   if (!v) return false; // Empty is invalid when required
+  if (v.startsWith('/uploads/')) return true; // Allow local uploads
   try {
     const u = new URL(v);
     return u.protocol === 'http:' || u.protocol === 'https:';
