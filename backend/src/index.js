@@ -33,7 +33,7 @@ const httpServer = createServer(app);
 // Configure CORS for Socket.IO
 const io = new Server(httpServer, {
   cors: {
-    origin: env.CORS_ORIGIN || 'https://localhost:3000',
+    origin: env.CORS_ORIGIN || 'http://smpark-frontend.s3-website-us-east-1.amazonaws.com',
     methods: ["GET", "POST"],
     credentials: true
   }
