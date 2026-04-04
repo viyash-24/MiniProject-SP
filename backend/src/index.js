@@ -63,6 +63,11 @@ app.use(express.json());
 app.use(morgan('dev'));
 app.use(rateLimit({ windowMs: 60 * 1000, max: 200 }));
 
+//Root route
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
+});
+
 // Health
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
@@ -86,9 +91,7 @@ app.use(notFound);
 
 // Error handler
 app.use(errorHandler);
-app.get("/", (req, res) => {
-  res.send("Backend is running!");
-});
+
 // Start
 (async () => {
   await connectDB();
