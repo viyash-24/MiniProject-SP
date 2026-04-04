@@ -77,7 +77,7 @@ export const AuthProvider = ({ children }) => {
   const loginWithGoogle = async () => {
     if (googlePromiseRef.current) return googlePromiseRef.current;
     const API_URL =
-      process.env.REACT_APP_API_URL || "http://localhost:5000/api";
+      process.env.REACT_APP_API_URL || "http://51.20.41.223:5000/api";
     const p = (async () => {
       const result = await signInWithPopup(auth, googleProvider);
       const u = result?.user;
