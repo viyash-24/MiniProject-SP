@@ -16,7 +16,7 @@ function DashboardPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('distance'); // distance, slots
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'https://d2o2ph936bp75l.cloudfront.net/api';
   const BASE_URL = API_URL.replace('/api', '');
 
   const fetchParkingAreas = useCallback(async () => {
