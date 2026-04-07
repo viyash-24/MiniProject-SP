@@ -26,7 +26,7 @@ const ParkingAreasPage = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const API_URL = process.env.REACT_APP_API_URL || 'https://d2o2ph936bp75l.cloudfront.net/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'http://51.20.41.223:5000/api';
   // This component for wrap getAuthHeader in useCallback
 const getAuthHeader = useCallback(() => {
   const headers = { 'Content-Type': 'application/json' };

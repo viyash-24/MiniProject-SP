@@ -91,7 +91,7 @@ const ProfilePage = () => {
       // ---------------------------------------------
 
 
-      if ((displayName !== user.displayName) || (photoUrl !== user.photoURL)) {
+      if ((displayName !== (user?.displayName || '')) || (photoUrl !== (user?.photoURL || ''))) {
 
         await updateProfile(auth.currentUser, { 
           displayName: displayName || null, 
@@ -114,7 +114,7 @@ const ProfilePage = () => {
       // ---------------------------------------------
 
 
-      if (email !== user.email) {
+      if (email !== (user?.email || '')) {
 
         await updateEmail(auth.currentUser, email);
 
