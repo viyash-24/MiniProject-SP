@@ -19,7 +19,7 @@ const AdminSlotManagementPage = () => {
     recalculateSlotCounts
   } = useSlotManagement();
   const { user } = useAuth();
-  const API_URL = process.env.REACT_APP_API_URL || 'https://d2o2ph936bp75l.cloudfront.net/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'http://51.20.41.223:5000/api';
   const authHeader = useMemo(() => ({
     'Content-Type': 'application/json',
     'x-admin-email': user?.email || ''
