@@ -13,7 +13,7 @@ const ParkingAreaDetailsPage = () => {
   const [availableSlots, setAvailableSlots] = useState(0);
   const [availableByType, setAvailableByType] = useState({ car: 0, bike: 0, van: 0, threeWheeler: 0 });
 
-  const API_URL = process.env.REACT_APP_API_URL || 'https://d2o2ph936bp75l.cloudfront.net/api';
+  const API_URL = process.env.REACT_APP_API_URL || 'http://51.20.41.223:5000/api';
   const BASE_URL = API_URL.replace('/api', '');
 
   const getAuthHeader = () => {
